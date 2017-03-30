@@ -12,14 +12,41 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.net.Socket;
 
-class Client {
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
 
-    private static String ip = "localhost";
-    private static int port = 3000;
+class Client {
+    private static String ip;
+    private static int port;
     
     public static void main(String[] args) {
         System.out.println("Client has started.");
 
+        //Parse CMD options
+        Options options = new Options();
+        options.addOption("PORT", true, "Server port");
+        options.addOption("IP", true, "Server IP address");
+        
+        CommandLineParser parser = new DefaultParser();
+        CommandLine cmd = null;
+        
+        try {
+            cmd = parser.parse(options, args);
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+        if (cmd.hasOption("PORT") && cmd.hasOption("IP")) {
+            port = Integer.parseInt(cmd.getOptionValue("PORT"));
+            ip = cmd.getOptionValue("IP");
+        } else {
+            System.out.println("Please provide IP and PORT options");
+            System.exit(0);
+        }       
+        //-----------
+        
             //Create client socket that auto-closes upon TRY exit
             //...and connect to a server socket
         try (Socket socket = new Socket(ip, port)){
@@ -32,11 +59,9 @@ class Client {
             output.writeUTF("I want to connect!");
             output.flush();
             
-            //Read anything the client may have sent, and print
-            if (input.available() != 0) {
-                String message = input.readUTF();
-                System.out.println(message);
-            }       
+            String message = input.readUTF();
+            System.out.println(message);
+       
         } catch (Exception e) {
             e.printStackTrace();
         }
