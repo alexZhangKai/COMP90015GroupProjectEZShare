@@ -10,6 +10,7 @@
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.IOException;
 import java.net.Socket;
 
 import org.apache.commons.cli.CommandLine;
@@ -59,8 +60,12 @@ class Client {
             output.writeUTF("I want to connect!");
             output.flush();
             
-            String message = input.readUTF();
-            System.out.println(message);
+           try {
+                 String message = input.readUTF();
+                 System.out.println(message);
+            } catch (IOException e) {
+                System.out.println("Server seems to have closed connection.");
+            }
        
         } catch (Exception e) {
             e.printStackTrace();
