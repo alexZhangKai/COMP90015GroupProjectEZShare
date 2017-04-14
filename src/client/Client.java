@@ -21,6 +21,8 @@ import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
+import org.json.simple.JSONObject;
+
 class Client {
     private static String ip;
     private static int port;
@@ -58,8 +60,26 @@ class Client {
             DataInputStream input = new DataInputStream(socket.getInputStream());
             DataOutputStream output = new DataOutputStream(socket.getOutputStream());
             
-            //Write something on outgoing stream and send it through
-            output.writeUTF("I want to connect!");
+            //Create a JSONObject command and send it to server
+            JSONObject command = new JSONObject();
+            
+            //create a test resource
+            JSONObject resource = new JSONObject();
+            String[] tags = {"tag1", "tag2"};
+            resource.put("name", "testName");            
+            resource.put("tags", tags.toString());
+            
+            //create a test publish command
+            command.put("command", "PUBLISH");
+            command.put("resource", resource.toJSONString());
+            command.put("description", "testDescription");
+            command.put("uri", "testURI");
+            command.put("channel", "testChannel");
+            command.put("owner", "");
+            command.put("ezserver", null);
+            
+            output.writeUTF(command.toJSONString());
+            System.out.println("request sent");
             output.flush();
             
            try {
