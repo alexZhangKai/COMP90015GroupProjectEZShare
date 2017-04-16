@@ -1,15 +1,14 @@
 package server;
 
-import java.util.List;
 import java.util.ArrayList;
 
 import org.json.simple.JSONObject;
 
 public class ResourceList {
-	private List resourceList;
+	private ArrayList<Resource> resourceList;
 	
 	public ResourceList() {
-		this.resourceList = new ArrayList();
+		this.resourceList = new ArrayList<Resource>();
 	}
 	
 	public synchronized boolean addResource(JSONObject resource) {
