@@ -50,6 +50,7 @@ class Client {
         argOptions.put("tags", true);
         argOptions.put("uri", true);
     }
+    private static Boolean debug = false;
     
     public static void main(String[] args) {
         System.out.println("Client has started.");
@@ -73,6 +74,9 @@ class Client {
         } else {
             System.out.println("Please provide IP and PORT options");
             System.exit(0);
+        }
+        if (initCmd.hasOption("debug")) {
+            debug = true;
         }
         
         //Decipher command and call respective method
