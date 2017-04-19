@@ -118,9 +118,12 @@ class Client {
             //Get I/O streams for connection
             DataInputStream input = new DataInputStream(socket.getInputStream());
             DataOutputStream output = new DataOutputStream(socket.getOutputStream());
+            
             //send request
             output.writeUTF(request);
-            System.out.println("request sent");
+            if (debug) {
+                System.out.println("[SENT]: " + request);
+            }
             output.flush();
                         
             while(true) {
