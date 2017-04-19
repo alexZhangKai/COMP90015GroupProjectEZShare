@@ -6,13 +6,10 @@ package client;
  * Sem 1, 2017
  * Group: AALT
  * 
- * Client-Server Template
- * AB 
  */
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.net.Socket;
 
@@ -24,8 +21,6 @@ import org.apache.commons.cli.ParseException;
 
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.JSONParser;
-
 import java.util.Arrays;
 import java.util.Scanner;
 
@@ -36,15 +31,11 @@ class Client {
     public static void main(String[] args) {
         System.out.println("Client has started.");
 
-        //Parse CMD options
+        //Parse input arguments
+        //TODO Add all arguments for client
         Options initOptions = new Options();
         initOptions.addOption("PORT", true, "Server port");
         initOptions.addOption("IP", true, "Server IP address");
-        
-        Options cmdOptions = new Options();
-        cmdOptions.addOption("CMD", true, "Command name");
-        cmdOptions.addOption("URI", true, "Resource URI");
-        
         CommandLineParser parser = new DefaultParser();
         CommandLine initCmd = null;
         
@@ -61,48 +52,74 @@ class Client {
             System.exit(0);
         }       
 
-        //read console command
+//------TESTING-------        
+//TODO Move arguments from cmd to input
+        
+        //read console command        
+        Options cmdOptions = new Options();
+        cmdOptions.addOption("publish", false, "Publish command");
+        cmdOptions.addOption("remove", false, "Remove command");
+        cmdOptions.addOption("fetch", false, "Fetch command");
+        cmdOptions.addOption("exchange", false, "Exchange command");
+        cmdOptions.addOption("uri", false, "Resource URI");
+        
+        cmdOptions.addOption("exit", false, "Exit command");
+
+        //TODO Remove scanner object for client
         Scanner scanner = new Scanner(System.in);
-        while (true) {
+        CommandLine cmdl = null;
+        String cmdName;
+        String resURI = "";
+        
+        //Forever parse command line arguments, for testing, until "exit"
+        readCMD: while (true) {
         	System.out.println("--------------------------------");
         	System.out.println("Please provide command and args");
-        	System.out.println("e.g. -CMD publish -URI test1");
+        	System.out.println("e.g. -publish");
         	String[] cmdArg = scanner.nextLine().split(" ");
-        	CommandLine cmdl = null;
-        	String cmdName;
-        	String resURI = "";
-        	String request = "";
         	try {
 				cmdl = parser.parse(cmdOptions, cmdArg);
 			} catch (ParseException e) {
 				e.printStackTrace();
 			}
         	
-        	if(cmdl.hasOption("CMD") && cmdl.getOptionValue("CMD").equals("exit")) {
-        		cmdName = cmdl.getOptionValue("CMD");
-        	} else if (cmdl.hasOption("CMD") && cmdl.hasOption("URI")) {
-        		cmdName = cmdl.getOptionValue("CMD");
-        		resURI = cmdl.getOptionValue("URI");
-        	} else {
-        		System.out.println("Please check the input and enter again:");
+        	//Parse basic essential command
+        	if (cmdl.hasOption("exchange")) {
+        		cmdName = "exchange";
+        	} else if (cmdl.hasOption("publish")) {
+        		cmdName = "publish";
+        	} else if (cmdl.hasOption("exit")){
+        	    cmdName = "exit";
+        	} else if (cmdl.hasOption("remove")) {
+                cmdName = "remove";
+            }
+        	else {
+        		System.out.println("Enter valid command e.g. -publish, -exit, etc.");
         		continue;
         	}
+        	if (cmdl.hasOption("uri")) {
+                resURI = cmdl.getOptionValue("uri");
+            }
+        	
+//------END TESTING-------
         	
         	switch (cmdName) {
-        	case "publish":
-        		PublishCmd(resURI);
-        		break;
-        	case "remove":
-        		RemoveCmd(resURI);
-        		break;
-        	case "fetch":
-        		FetchCmd(resURI);
-        	case "exit":
-        		System.out.println("terminate client...");
-        		System.exit(0);
+            	case "publish":
+            		PublishCmd(resURI);
+            		break;
+            	case "remove":
+            		RemoveCmd(resURI);
+            		break;
+            	case "fetch":
+            		FetchCmd(resURI);
+            		break;
+            	case "exit":
+            	//TODO Remove exit when commands are provided as input
+            		System.out.println("\nClient terminated.");
+            		break readCMD;
         	}
-        	
         }
+        scanner.close();
     }
      
     public static void generalReply(String request) {
