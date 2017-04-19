@@ -1,18 +1,16 @@
-package client;
-
 /*
  * Distributed Systems
  * Group Project 1
  * Sem 1, 2017
  * Group: AALT
- * 
- * Client-Server Template
- * AB 
+ *
+ * Client-side application
  */
+
+package client;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.net.Socket;
 
@@ -24,27 +22,43 @@ import org.apache.commons.cli.ParseException;
 
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.JSONParser;
-
 import java.util.Arrays;
-import java.util.Scanner;
+import java.util.HashMap;
+import java.util.Map;
 
 class Client {
     private static String ip;
     private static int port;
+    private static final Map<String, Boolean> argOptions;
+    static{
+        argOptions = new HashMap<>();
+        argOptions.put("channel", true);
+        argOptions.put("debug", false);
+        argOptions.put("description", true);
+        argOptions.put("exchange", false);
+        argOptions.put("fetch", false);
+        argOptions.put("host", true);
+        argOptions.put("name", true);
+        argOptions.put("owner", true);
+        argOptions.put("port", true);
+        argOptions.put("publish", false);
+        argOptions.put("query", false);
+        argOptions.put("remove", false);
+        argOptions.put("secret", true);
+        argOptions.put("servers", true);
+        argOptions.put("share", false);
+        argOptions.put("tags", true);
+        argOptions.put("uri", true);
+    }
     
     public static void main(String[] args) {
         System.out.println("Client has started.");
 
-        //Parse CMD options
+        //Parse input arguments
         Options initOptions = new Options();
-        initOptions.addOption("PORT", true, "Server port");
-        initOptions.addOption("IP", true, "Server IP address");
-        
-        Options cmdOptions = new Options();
-        cmdOptions.addOption("CMD", true, "Command name");
-        cmdOptions.addOption("URI", true, "Resource URI");
-        
+        for (String option: argOptions.keySet()){
+            initOptions.addOption(option, argOptions.get(option), option);
+        }
         CommandLineParser parser = new DefaultParser();
         CommandLine initCmd = null;
         
@@ -53,59 +67,49 @@ class Client {
         } catch (ParseException e) {
             e.printStackTrace();
         }
-        if (initCmd.hasOption("PORT") && initCmd.hasOption("IP")) {
-            port = Integer.parseInt(initCmd.getOptionValue("PORT"));
-            ip = initCmd.getOptionValue("IP");
+        if (initCmd.hasOption("port") && initCmd.hasOption("host")) {
+            port = Integer.parseInt(initCmd.getOptionValue("port"));
+            ip = initCmd.getOptionValue("host");
         } else {
             System.out.println("Please provide IP and PORT options");
             System.exit(0);
-        }       
-
-        //read console command
-        Scanner scanner = new Scanner(System.in);
-        while (true) {
-        	System.out.println("--------------------------------");
-        	System.out.println("Please provide command and args");
-        	System.out.println("e.g. -CMD publish -URI test1");
-        	String[] cmdArg = scanner.nextLine().split(" ");
-        	CommandLine cmdl = null;
-        	String cmdName;
-        	String resURI = "";
-        	String request = "";
-        	try {
-				cmdl = parser.parse(cmdOptions, cmdArg);
-			} catch (ParseException e) {
-				e.printStackTrace();
-			}
-        	
-        	if(cmdl.hasOption("CMD") && cmdl.getOptionValue("CMD").equals("exit")) {
-        		cmdName = cmdl.getOptionValue("CMD");
-        	} else if (cmdl.hasOption("CMD") && cmdl.hasOption("URI")) {
-        		cmdName = cmdl.getOptionValue("CMD");
-        		resURI = cmdl.getOptionValue("URI");
-        	} else {
-        		System.out.println("Please check the input and enter again:");
-        		continue;
-        	}
-        	
-        	switch (cmdName) {
-        	case "publish":
-        		PublishCmd(resURI);
-        		break;
-        	case "remove":
-        		RemoveCmd(resURI);
-        		break;
-        	case "fetch":
-        		FetchCmd(resURI);
-        	case "exit":
-        		System.out.println("terminate client...");
-        		System.exit(0);
-        	}
-        	
+        }
+        
+        //Decipher command and call respective method
+        if (initCmd.hasOption("publish")) {
+            Client.PublishCmd(initCmd);
+        } else if (initCmd.hasOption("remove")) {
+            Client.RemoveCmd(initCmd);
+        } else if (initCmd.hasOption("share")) {
+            Client.ShareCmd(initCmd);
+        } else if (initCmd.hasOption("query")) {
+            Client.QueryCmd(initCmd);
+        } else if (initCmd.hasOption("fetch")) {
+            Client.FetchCmd(initCmd);
+        } else if (initCmd.hasOption("exchange")) {
+            Client.ExchangeCmd(initCmd);
+        } else {
+            System.out.println("Please use valid arguments.");
         }
     }
      
+    private static void ExchangeCmd(CommandLine initCmd) {
+        // TODO Exchange command
+        
+    }
+
+    private static void QueryCmd(CommandLine initCmd) {
+        // TODO Query command
+        
+    }
+
+    private static void ShareCmd(CommandLine initCmd) {
+        // TODO Share command
+        
+    }
+
     public static void generalReply(String request) {
+        //TODO is this still needed?
     	try (Socket socket = new Socket(ip, port)){
             //Get I/O streams for connection
             DataInputStream input = new DataInputStream(socket.getInputStream());
@@ -127,8 +131,12 @@ class Client {
         }
     }
     
-    public static void PublishCmd(String URI) {
-    	//Create a JSONObject command and send it to server
+    @SuppressWarnings("unchecked")  
+    //JSONObject extends HashMap but does not have type parameters as HashMap would expect...
+    public static void PublishCmd(CommandLine initCmd) {
+        //TODO Publish command, remove testing code
+        
+        //Create a JSONObject command and send it to server
         JSONObject command = new JSONObject();
         
         //create a test resource
@@ -137,7 +145,7 @@ class Client {
         resource.put("name", "testName");            
         resource.put("tags", tags.toString());
         resource.put("description", "testDescription");
-        resource.put("uri", URI);
+        resource.put("uri", initCmd.getOptionValue("uri"));
         resource.put("channel", "testChannel");
         resource.put("owner", "");
         resource.put("ezserver", null);
@@ -148,7 +156,11 @@ class Client {
         generalReply(command.toJSONString());
     }
     
-    public static void RemoveCmd(String URI) {
+    @SuppressWarnings("unchecked")
+    //JSONObject extends HashMap but does not have type parameters as HashMap would expect...
+    public static void RemoveCmd(CommandLine initCmd) {
+        //TODO Remove command, finalize and remove test code
+        
     	//Create a JSONObject command and send it to server
         JSONObject command = new JSONObject();
         
@@ -158,7 +170,7 @@ class Client {
         resource.put("name", "testName");            
         resource.put("tags", tags.toString());
         resource.put("description", "testDescription");
-        resource.put("uri", URI);
+        resource.put("uri", initCmd);
         resource.put("channel", "testChannel");
         resource.put("owner", "");
         resource.put("ezserver", null);
@@ -167,10 +179,13 @@ class Client {
         command.put("resource", resource.toJSONString());
         
         generalReply(command.toJSONString());
-        
     }
     
-    public static void FetchCmd(String URI) {
+    @SuppressWarnings("unchecked")
+    //JSONObject extends HashMap but does not have type parameters as HashMap would expect...
+    public static void FetchCmd(CommandLine initCmd) {
+        //TODO Fetch command, remove test code and finalise
+        
     	//Create a JSONObject command and send it to server
         JSONObject command = new JSONObject();
         
@@ -180,7 +195,7 @@ class Client {
         resourceTemplate.put("name", "testName");            
         resourceTemplate.put("tags", tags.toString());
         resourceTemplate.put("description", "testDescription");
-        resourceTemplate.put("uri", URI);
+        resourceTemplate.put("uri", initCmd);
         resourceTemplate.put("channel", "testChannel");
         resourceTemplate.put("owner", "");
         resourceTemplate.put("ezserver", null);

@@ -1,30 +1,37 @@
+/*
+ * Distributed Systems
+ * Group Project 1
+ * Sem 1, 2017
+ * Group: AALT
+ * 
+ * This class keeps track of which resources exist on this server.
+ * It implements the basic list functions [add, remove, indexOf] using 'synchronised' for concurrency protection.
+ */
+
 package server;
 
 import java.util.ArrayList;
 
-import org.json.simple.JSONObject;
-
 public class ResourceList {
 	private ArrayList<Resource> resourceList;
-	
 	public ResourceList() {
 		this.resourceList = new ArrayList<Resource>();
 	}
 	
 	public synchronized boolean addResource(Resource newResource) {
-		//query resource in current list
-		if(queryResource(newResource) == -1) {
+		//Check if resource already exists...
+		if(queryResource(newResource) == -1) {    //...add it if it doesn't.
 			resourceList.add(newResource);
 			return true;
 		}
-		
 		return false;
 	}
 	
 	public synchronized boolean removeResource(Resource oldResource) {
-		//query resource in current list
+		//Check if resource already exists...
 		int index = queryResource(oldResource);
-		if(index != -1) {
+		
+		if(index != -1) { //...remove if it does.
 			resourceList.remove(index);
 			return true;
 		}
@@ -32,13 +39,12 @@ public class ResourceList {
 	}
 	
 	public int queryResource(Resource re) {
+	    //Check if resource already exists...
 		int len = resourceList.size();
-		
-		//return -1 when list is empty
 		if(len == 0) return -1;
 		
-		for(int i = 0; i < len; i++) {
-			if(Resource.compare(re, (Resource) resourceList.get(i))) {
+		for(int i = 0; i < len; i++) {    //...return its position in the list if it does.
+			if(re.equals(resourceList.get(i))) {
 				return i;
 			}
 		}
