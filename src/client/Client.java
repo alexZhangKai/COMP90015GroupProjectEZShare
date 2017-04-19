@@ -1,12 +1,13 @@
-package client;
-
 /*
  * Distributed Systems
  * Group Project 1
  * Sem 1, 2017
  * Group: AALT
- * 
+ *
+ * Client-side application
  */
+
+package client;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;

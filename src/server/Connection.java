@@ -1,3 +1,14 @@
+/*
+ * Distributed Systems
+ * Group Project 1
+ * Sem 1, 2017
+ * Group: AALT
+ * 
+ * Class that handles connections with each client
+ * It runs as a separate thread
+ * It implements the major functionality expected of the server e.g. Publish, Remove, etc.
+ */
+
 package server;
 
 import java.io.*;
@@ -9,7 +20,6 @@ import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
 public class Connection implements Runnable {
-
 	private int id;
 	private Socket client;
 	private ResourceList resourceList;
@@ -20,7 +30,10 @@ public class Connection implements Runnable {
 		this.resourceList = resourceList;
 	}
 	
-	@Override
+	@SuppressWarnings("unchecked")
+	//JSONObject extends HashMap but does not have type parameters as HashMap would expect...
+	
+    @Override
 	public void run() {
 		System.out.println("Connection: " + id);
 		try {
@@ -28,36 +41,58 @@ public class Connection implements Runnable {
 			DataOutputStream output = new DataOutputStream(client.getOutputStream());			
 			JSONParser parser = new JSONParser();
 			
-			JSONObject command = (JSONObject) parser.parse(input.readUTF());
+			JSONObject client_request = (JSONObject) parser.parse(input.readUTF());
 			
-			//TODO Create blank methods for everyone to work on
-			if(command.containsKey("command")) {
-				switch((String) command.get("command")) {
+			if(client_request.containsKey("command")) {
+				switch((String) client_request.get("command")) {
 				case "PUBLISH":
-					publish(command,output);
+					publish(client_request, output);
 					break;
 				case "REMOVE":
-					remove(command, output);
+					remove(client_request, output);
 					break;
+				case "SHARE":
+                    share(client_request, output);
+                    break;
+				case "QUERY":
+                    query(client_request, output);
+                    break;
 				case "FETCH":
-					fetch(command, output);
+					fetch(client_request, output);
 					break;
+				case "EXCHANGE":
+                    exchange(client_request, output);
+                    break;
 				default:
 					JSONObject reply = new JSONObject();
 					reply.put("error", "unknown_command");
 					output.writeUTF(reply.toJSONString());
 				}
-
 			}
-			
 		} catch (IOException | ParseException e) {
 			e.printStackTrace();
 		}		
 	}
 
-	private void publish(JSONObject command, DataOutputStream output) throws ParseException, IOException {
+	private void exchange(JSONObject client_request, DataOutputStream output) {
+        // TODO Exchange method
+        
+    }
+
+    private void query(JSONObject client_request, DataOutputStream output) {
+        // TODO Query method
+        
+    }
+
+    private void share(JSONObject client_request, DataOutputStream output) {
+        // TODO Share method
+        
+    }
+
+    @SuppressWarnings("unchecked")
+    private void publish(JSONObject client_req, DataOutputStream output) throws ParseException, IOException {
 		JSONParser parser = new JSONParser();
-		JSONObject resourceJSON = (JSONObject) parser.parse((String) command.get("resource"));
+		JSONObject resourceJSON = (JSONObject) parser.parse((String) client_req.get("resource"));
 		
 		Resource resource = JSONObj2Resource(resourceJSON);
 		
@@ -76,7 +111,8 @@ public class Connection implements Runnable {
 		output.writeUTF(reply.toJSONString());
 	}
 	
-	private void remove(JSONObject command, DataOutputStream output) throws ParseException, IOException {
+	@SuppressWarnings("unchecked")
+    private void remove(JSONObject command, DataOutputStream output) throws ParseException, IOException {
 		JSONParser parser = new JSONParser();
 		JSONObject resourceJSON = (JSONObject) parser.parse((String) command.get("resource"));
 		
@@ -96,11 +132,14 @@ public class Connection implements Runnable {
 		output.writeUTF(reply.toJSONString());
 	}
 	
-	private void fetch(JSONObject command, DataOutputStream output) throws ParseException, IOException {
-		JSONParser parser = new JSONParser();
-		JSONObject resourceJSON = (JSONObject) parser.parse((String) command.get("resourceTemplate"));
+	@SuppressWarnings("unchecked")
+    private void fetch(JSONObject command, DataOutputStream output) throws ParseException, IOException {
+
+	    //the following three lines not being used so far, thus commented out. Decomment when needed.
+//		JSONParser parser = new JSONParser();
+//		JSONObject resourceJSON = (JSONObject) parser.parse((String) command.get("resourceTemplate"));
+//		Resource resourceTemplate = JSONObj2Resource(resourceJSON);
 		
-		Resource resourceTemplate = JSONObj2Resource(resourceJSON);
 		//Use a known URI, need to check the file afterward ? 
 		String URI = "serverFile/testFile.png";
 		File f = new File(URI);

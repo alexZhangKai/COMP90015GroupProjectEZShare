@@ -1,3 +1,12 @@
+/*
+ * Distributed Systems
+ * Group Project 1
+ * Sem 1, 2017
+ * Group: AALT
+ * 
+ * This class is used to represent each resource.
+ */
+
 package server;
 
 //Instantiate for each resource in ResourceList
