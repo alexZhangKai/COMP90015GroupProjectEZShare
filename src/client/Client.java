@@ -74,6 +74,7 @@ class Client {
             System.exit(0);
         }
         
+        //Decipher command and call respective method
         if (initCmd.hasOption("publish")) {
             Client.PublishCmd(initCmd);
         } else if (initCmd.hasOption("remove")) {
@@ -107,6 +108,7 @@ class Client {
     }
 
     public static void generalReply(String request) {
+        //TODO is this still needed?
     	try (Socket socket = new Socket(ip, port)){
             //Get I/O streams for connection
             DataInputStream input = new DataInputStream(socket.getInputStream());
@@ -128,7 +130,10 @@ class Client {
         }
     }
     
+    @SuppressWarnings("unchecked")  
+    //JSONObject extends HashMap but does not have type parameters as HashMap would expect...
     public static void PublishCmd(CommandLine initCmd) {
+        //TODO Publish command, remove testing code
         
         //Create a JSONObject command and send it to server
         JSONObject command = new JSONObject();
@@ -150,7 +155,11 @@ class Client {
         generalReply(command.toJSONString());
     }
     
+    @SuppressWarnings("unchecked")
+    //JSONObject extends HashMap but does not have type parameters as HashMap would expect...
     public static void RemoveCmd(CommandLine initCmd) {
+        //TODO Remove command, finalize and remove test code
+        
     	//Create a JSONObject command and send it to server
         JSONObject command = new JSONObject();
         
@@ -169,10 +178,13 @@ class Client {
         command.put("resource", resource.toJSONString());
         
         generalReply(command.toJSONString());
-        
     }
     
+    @SuppressWarnings("unchecked")
+    //JSONObject extends HashMap but does not have type parameters as HashMap would expect...
     public static void FetchCmd(CommandLine initCmd) {
+        //TODO Fetch command, remove test code and finalise
+        
     	//Create a JSONObject command and send it to server
         JSONObject command = new JSONObject();
         

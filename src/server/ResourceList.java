@@ -38,7 +38,7 @@ public class ResourceList {
 		if(len == 0) return -1;
 		
 		for(int i = 0; i < len; i++) {
-			if(Resource.compare(re, (Resource) resourceList.get(i))) {
+			if(re.equals(resourceList.get(i))) {
 				return i;
 			}
 		}
