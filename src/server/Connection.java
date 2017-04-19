@@ -29,6 +29,8 @@ public class Connection implements Runnable {
 			JSONParser parser = new JSONParser();
 			
 			JSONObject command = (JSONObject) parser.parse(input.readUTF());
+			
+			//TODO Create blank methods for everyone to work on
 			if(command.containsKey("command")) {
 				switch((String) command.get("command")) {
 				case "PUBLISH":

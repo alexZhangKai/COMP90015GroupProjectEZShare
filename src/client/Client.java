@@ -22,20 +22,42 @@ import org.apache.commons.cli.ParseException;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import java.util.Arrays;
-import java.util.Scanner;
+import java.util.HashMap;
+import java.util.Map;
 
 class Client {
     private static String ip;
     private static int port;
+    private static final Map<String, Boolean> argOptions;
+    static{
+        argOptions = new HashMap<>();
+        argOptions.put("channel", true);
+        argOptions.put("debug", false);
+        argOptions.put("description", true);
+        argOptions.put("exchange", false);
+        argOptions.put("fetch", false);
+        argOptions.put("host", true);
+        argOptions.put("name", true);
+        argOptions.put("owner", true);
+        argOptions.put("port", true);
+        argOptions.put("publish", false);
+        argOptions.put("query", false);
+        argOptions.put("remove", false);
+        argOptions.put("secret", true);
+        argOptions.put("servers", true);
+        argOptions.put("share", false);
+        argOptions.put("tags", true);
+        argOptions.put("uri", true);
+    }
     
     public static void main(String[] args) {
         System.out.println("Client has started.");
 
         //Parse input arguments
-        //TODO Add all arguments for client
         Options initOptions = new Options();
-        initOptions.addOption("PORT", true, "Server port");
-        initOptions.addOption("IP", true, "Server IP address");
+        for (String option: argOptions.keySet()){
+            initOptions.addOption(option, argOptions.get(option), option);
+        }
         CommandLineParser parser = new DefaultParser();
         CommandLine initCmd = null;
         
@@ -44,84 +66,46 @@ class Client {
         } catch (ParseException e) {
             e.printStackTrace();
         }
-        if (initCmd.hasOption("PORT") && initCmd.hasOption("IP")) {
-            port = Integer.parseInt(initCmd.getOptionValue("PORT"));
-            ip = initCmd.getOptionValue("IP");
+        if (initCmd.hasOption("port") && initCmd.hasOption("host")) {
+            port = Integer.parseInt(initCmd.getOptionValue("port"));
+            ip = initCmd.getOptionValue("host");
         } else {
             System.out.println("Please provide IP and PORT options");
             System.exit(0);
-        }       
-
-//------TESTING-------        
-//TODO Move arguments from cmd to input
-        
-        //read console command        
-        Options cmdOptions = new Options();
-        cmdOptions.addOption("publish", false, "Publish command");
-        cmdOptions.addOption("remove", false, "Remove command");
-        cmdOptions.addOption("fetch", false, "Fetch command");
-        cmdOptions.addOption("exchange", false, "Exchange command");
-        cmdOptions.addOption("uri", false, "Resource URI");
-        
-        cmdOptions.addOption("exit", false, "Exit command");
-
-        //TODO Remove scanner object for client
-        Scanner scanner = new Scanner(System.in);
-        CommandLine cmdl = null;
-        String cmdName;
-        String resURI = "";
-        
-        //Forever parse command line arguments, for testing, until "exit"
-        readCMD: while (true) {
-        	System.out.println("--------------------------------");
-        	System.out.println("Please provide command and args");
-        	System.out.println("e.g. -publish");
-        	String[] cmdArg = scanner.nextLine().split(" ");
-        	try {
-				cmdl = parser.parse(cmdOptions, cmdArg);
-			} catch (ParseException e) {
-				e.printStackTrace();
-			}
-        	
-        	//Parse basic essential command
-        	if (cmdl.hasOption("exchange")) {
-        		cmdName = "exchange";
-        	} else if (cmdl.hasOption("publish")) {
-        		cmdName = "publish";
-        	} else if (cmdl.hasOption("exit")){
-        	    cmdName = "exit";
-        	} else if (cmdl.hasOption("remove")) {
-                cmdName = "remove";
-            }
-        	else {
-        		System.out.println("Enter valid command e.g. -publish, -exit, etc.");
-        		continue;
-        	}
-        	if (cmdl.hasOption("uri")) {
-                resURI = cmdl.getOptionValue("uri");
-            }
-        	
-//------END TESTING-------
-        	
-        	switch (cmdName) {
-            	case "publish":
-            		PublishCmd(resURI);
-            		break;
-            	case "remove":
-            		RemoveCmd(resURI);
-            		break;
-            	case "fetch":
-            		FetchCmd(resURI);
-            		break;
-            	case "exit":
-            	//TODO Remove exit when commands are provided as input
-            		System.out.println("\nClient terminated.");
-            		break readCMD;
-        	}
         }
-        scanner.close();
+        
+        if (initCmd.hasOption("publish")) {
+            Client.PublishCmd(initCmd);
+        } else if (initCmd.hasOption("remove")) {
+            Client.RemoveCmd(initCmd);
+        } else if (initCmd.hasOption("share")) {
+            Client.ShareCmd(initCmd);
+        } else if (initCmd.hasOption("query")) {
+            Client.QueryCmd(initCmd);
+        } else if (initCmd.hasOption("fetch")) {
+            Client.FetchCmd(initCmd);
+        } else if (initCmd.hasOption("exchange")) {
+            Client.ExchangeCmd(initCmd);
+        } else {
+            System.out.println("Please use valid arguments.");
+        }
     }
      
+    private static void ExchangeCmd(CommandLine initCmd) {
+        // TODO Exchange command
+        
+    }
+
+    private static void QueryCmd(CommandLine initCmd) {
+        // TODO Query command
+        
+    }
+
+    private static void ShareCmd(CommandLine initCmd) {
+        // TODO Share command
+        
+    }
+
     public static void generalReply(String request) {
     	try (Socket socket = new Socket(ip, port)){
             //Get I/O streams for connection
@@ -144,8 +128,9 @@ class Client {
         }
     }
     
-    public static void PublishCmd(String URI) {
-    	//Create a JSONObject command and send it to server
+    public static void PublishCmd(CommandLine initCmd) {
+        
+        //Create a JSONObject command and send it to server
         JSONObject command = new JSONObject();
         
         //create a test resource
@@ -154,7 +139,7 @@ class Client {
         resource.put("name", "testName");            
         resource.put("tags", tags.toString());
         resource.put("description", "testDescription");
-        resource.put("uri", URI);
+        resource.put("uri", initCmd.getOptionValue("uri"));
         resource.put("channel", "testChannel");
         resource.put("owner", "");
         resource.put("ezserver", null);
@@ -165,7 +150,7 @@ class Client {
         generalReply(command.toJSONString());
     }
     
-    public static void RemoveCmd(String URI) {
+    public static void RemoveCmd(CommandLine initCmd) {
     	//Create a JSONObject command and send it to server
         JSONObject command = new JSONObject();
         
@@ -175,7 +160,7 @@ class Client {
         resource.put("name", "testName");            
         resource.put("tags", tags.toString());
         resource.put("description", "testDescription");
-        resource.put("uri", URI);
+        resource.put("uri", initCmd);
         resource.put("channel", "testChannel");
         resource.put("owner", "");
         resource.put("ezserver", null);
@@ -187,7 +172,7 @@ class Client {
         
     }
     
-    public static void FetchCmd(String URI) {
+    public static void FetchCmd(CommandLine initCmd) {
     	//Create a JSONObject command and send it to server
         JSONObject command = new JSONObject();
         
@@ -197,7 +182,7 @@ class Client {
         resourceTemplate.put("name", "testName");            
         resourceTemplate.put("tags", tags.toString());
         resourceTemplate.put("description", "testDescription");
-        resourceTemplate.put("uri", URI);
+        resourceTemplate.put("uri", initCmd);
         resourceTemplate.put("channel", "testChannel");
         resourceTemplate.put("owner", "");
         resourceTemplate.put("ezserver", null);
