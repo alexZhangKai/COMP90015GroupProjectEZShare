@@ -12,12 +12,12 @@ public class ResourceList {
 	}
 	
 	public synchronized boolean addResource(Resource newResource) {
-		System.out.println("add resource");
 		//query resource in current list
 		if(queryResource(newResource) == -1) {
 			resourceList.add(newResource);
 			return true;
 		}
+		
 		return false;
 	}
 	
@@ -43,6 +43,10 @@ public class ResourceList {
 			}
 		}
 		return -1;
+	}
+	
+	public int getSize() {
+		return resourceList.size();
 	}
 	
 }

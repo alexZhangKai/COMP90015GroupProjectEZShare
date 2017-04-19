@@ -21,9 +21,9 @@ public class Resource {
 	}
 	
 	public static boolean compare(Resource re1, Resource re2) {
-		if(re1.getChannel() == re2.getChannel() && 
-				re1.getOwner() == re2.getOwner() && 
-				re1.getURI() == re2.getURI()) {
+		if(re1.getChannel().equals(re2.getChannel()) && 
+				re1.getOwner().equals(re2.getOwner()) && 
+				re1.getURI().equals(re2.getURI())) {
 			return true;
 		}
 		return false;
