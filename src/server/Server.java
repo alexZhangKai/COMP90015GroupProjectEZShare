@@ -1,10 +1,20 @@
+/*
+ * Distributed Systems
+ * Group Project 1
+ * Sem 1, 2017
+ * Group: AALT
+ * 
+ * Server-side application; relies on Resource, ResourceList and Connection classes
+ */
+
 package server;
 
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
 import javax.net.ServerSocketFactory;
 
 import org.apache.commons.cli.CommandLine;
@@ -15,16 +25,31 @@ import org.apache.commons.cli.ParseException;
 
 public class Server {
 
-    private static int counter = 0;     //keep count of number of client connections
+    private static final int MAX_THREADS = 2;
+    private static int connections_cnt = 0;
     private static int port;
     private static ResourceList resourceList = new ResourceList();
+    
+    private static final Map<String, Boolean> argOptions;
+    static{
+        argOptions = new HashMap<>();
+        argOptions.put("advertisedhostname", true);
+        argOptions.put("connectionintervallimit", true);
+        argOptions.put("exchangeinterval", true);
+        argOptions.put("port", true);
+        argOptions.put("secret", true);
+        argOptions.put("debug", false);
+    }
     
     public static void main(String[] args) {
         System.out.println("Server has started.");
         
         //Parse CMD options
         Options options = new Options();
-        options.addOption("PORT", true, "Server port");
+        for (String option: argOptions.keySet()){
+            options.addOption(option, argOptions.get(option), option);
+        }
+        
         CommandLineParser parser = new DefaultParser();
         CommandLine cmd = null;
         
@@ -34,8 +59,8 @@ public class Server {
             e.printStackTrace();
         }
         
-        if (cmd.hasOption("PORT")) {
-            port = Integer.parseInt(cmd.getOptionValue("PORT"));
+        if (cmd.hasOption("port")) {
+            port = Integer.parseInt(cmd.getOptionValue("port"));
         } else {
             System.out.println("Please provide PORT option.");
             System.exit(0);
@@ -50,14 +75,14 @@ public class Server {
             System.out.println("Waiting for client connection...");
             
             //Keep listening for connections and use a thread pool with 2 threads
-            ExecutorService executor = Executors.newFixedThreadPool(2);
+            ExecutorService executor = Executors.newFixedThreadPool(MAX_THREADS);
             while (true){
                 Socket client = server.accept();
-                counter++;
-                System.out.println("Client " + counter + " requesting connection.");
+                connections_cnt++;
+                System.out.println("Client " + connections_cnt + " requesting connection.");
                 
                 //Create, and start, a new thread that processes incoming connections
-                executor.submit(new Connection(counter, client, resourceList));
+                executor.submit(new Connection(connections_cnt, client, resourceList));
             }
         } catch (Exception e) {
             e.printStackTrace();
