@@ -51,19 +51,9 @@ public class Connection implements Runnable {
 
 	private JSONObject publish(JSONObject command) throws ParseException {
 		JSONParser parser = new JSONParser();
-		JSONObject resource = (JSONObject) parser.parse((String) command.get("resource"));
+		JSONObject resourceJSON = (JSONObject) parser.parse((String) command.get("resource"));
 		
-		String Description = resource.containsKey("description") ? (String) resource.get("description") : "";
-		String URI = (String) resource.get("uri");
-		String Channel = resource.containsKey("channel") ? (String) resource.get("channel") : "";
-		String Owner = resource.containsKey("owner") ? (String) resource.get("owner") : "";
-		String EZserver = resource.containsKey("ezserver") ? (String) resource.get("ezserver") : "";
-		
-		resource.put("description", Description);
-		resource.put("uri", URI);
-		resource.put("channel", Channel);
-		resource.put("owner", Owner);
-		resource.put("ezserver", EZserver);
+		Resource resource = JSONObj2Resource(resourceJSON);
 		
 		boolean result = resourceList.addResource(resource);
 		
@@ -76,5 +66,19 @@ public class Connection implements Runnable {
 		}
 		
 		return reply;
+	}
+	
+	private Resource JSONObj2Resource(JSONObject resource) {
+		
+		String Name = resource.containsKey("name") ? (String) resource.get("name") : "";
+		String Description = resource.containsKey("description") ? (String) resource.get("description") : "";
+		//String[] Tags is different deal with it later
+		String[] Tags = new String[0];
+		String URI = resource.containsKey("uri") ? (String) resource.get("uri") : "";
+		String Channel = resource.containsKey("channel") ? (String) resource.get("channel") : "";
+		String Owner = resource.containsKey("owner") ? (String) resource.get("owner") : "";
+		String EZserver = resource.containsKey("ezserver") ? (String) resource.get("ezserver") : "";
+		
+		return new Resource(Name, Description, Tags, URI, Channel, Owner, EZserver);
 	}
 }

@@ -11,9 +11,8 @@ public class ResourceList {
 		this.resourceList = new ArrayList<Resource>();
 	}
 	
-	public synchronized boolean addResource(JSONObject resource) {
+	public synchronized boolean addResource(Resource newResource) {
 		System.out.println("add resource");
-		Resource newResource = createResource(resource);
 		//query resource in current list
 		if(queryResource(newResource) == -1) {
 			resourceList.add(newResource);
@@ -22,8 +21,7 @@ public class ResourceList {
 		return false;
 	}
 	
-	public synchronized boolean removeResource(JSONObject resource) {
-		Resource oldResource = createResource(resource);
+	public synchronized boolean removeResource(Resource oldResource) {
 		//query resource in current list
 		int index = queryResource(oldResource);
 		if(index != -1) {
@@ -47,17 +45,4 @@ public class ResourceList {
 		return -1;
 	}
 	
-	public Resource createResource(JSONObject resource) {
-		//get attributes
-		String Name = resource.containsKey("name") ? (String) resource.get("name") : "";
-		String Description = resource.containsKey("description") ? (String) resource.get("description") : "";
-		String[] Tags = {"a"};
-		//String[] Tags = resource.containsKey("tags") ? (String[]) resource.get("tags") : new String[0];
-		String URI = (String) resource.get("uri");
-		String Channel = resource.containsKey("channel") ? (String) resource.get("channel") : "";
-		String Owner = resource.containsKey("owner") ? (String) resource.get("owner") : "";
-		String EZserver = resource.containsKey("ezserver") ? (String) resource.get("ezserver") : "";
-		
-		return new Resource(Name, Description, Tags, URI, Channel, Owner, EZserver);
-	}
 }
