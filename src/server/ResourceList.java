@@ -18,13 +18,28 @@ public class ResourceList {
 		this.resourceList = new ArrayList<Resource>();
 	}
 	
-	public synchronized boolean addResource(Resource newResource) {
+	public synchronized String addResource(Resource newResource) {
 		//Check if resource already exists...
-		if(queryResource(newResource) == -1) {    //...add it if it doesn't.
+		String response="";
+		int index = queryResource(newResource);
+		if(index == -1) {    //...add it if it doesn't.
 			resourceList.add(newResource);
-			return true;
+			response = "success";
 		}
-		return false;
+		
+		else if(index != -1) {  //remove existing resource and add new resource
+			resourceList.remove(index);
+			resourceList.add(newResource);
+			response = "success";
+	
+		}
+		
+	
+		
+		// else if(5) 
+			
+		return response;
+		
 	}
 	
 	public synchronized boolean removeResource(Resource oldResource) {

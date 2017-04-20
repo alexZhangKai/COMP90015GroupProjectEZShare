@@ -1,6 +1,6 @@
-<<<<<<< HEAD
-//lisa branch
-=======
+
+
+
 /*
  * Distributed Systems
  * Group Project 1
@@ -12,7 +12,7 @@
  * It implements the major functionality expected of the server e.g. Publish, Remove, etc.
  */
 
->>>>>>> master
+
 package server;
 
 import java.io.*;
@@ -96,18 +96,30 @@ public class Connection implements Runnable {
     @SuppressWarnings("unchecked")
     private void publish(JSONObject client_req, DataOutputStream output) throws ParseException, IOException {
 		JSONParser parser = new JSONParser();
-		JSONObject resourceJSON = (JSONObject) parser.parse((String) client_req.get("resource"));
-		
-		Resource resource = JSONObj2Resource(resourceJSON);
-		
-		boolean result = resourceList.addResource(resource);
-		
 		//create a reply
 		JSONObject reply = new JSONObject();
-		if(result) {
+	
+		
+		JSONObject resourceJSON = (JSONObject) parser.parse((String) client_req.get("resource"));
+	
+		Resource resource = JSONObj2Resource(resourceJSON);
+		
+		
+		if ((resource.getURI()=="")){
+			reply.put("response", "error");
+			reply.put("errorMessage", "missing resource");
+		}
+		
+		 String result = resourceList.addResource(resource);
+		
+	
+		if(result.equals("success")) {
 			reply.put("response", "success");
-		} else {
-			reply.put("reponse", "fail");
+		} 
+		
+		else  {
+			reply.put("reponse", "error");
+			reply.put("errorMessage", "cannot publish resource");
 		}
 		
 		//put reply in output stream

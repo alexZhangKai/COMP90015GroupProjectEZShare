@@ -6,8 +6,10 @@
  *
  * Client-side application
  */
-jjjj
+
 package client;
+
+
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -103,9 +105,43 @@ class Client {
         
     }
 
-    private static void ShareCmd(CommandLine initCmd) {
-        // TODO Share command
+    @SuppressWarnings("unchecked")
+    //JSONObject extends HashMap but does not have type parameters as HashMap would expect...
+    public static void ShareCmd(CommandLine initCmd) {
+        //TODO Share command, finalize and share test code
         
+    	//Create a JSONObject command and send it to server
+        JSONObject command = new JSONObject();
+        
+        //create a test resource
+        JSONObject resource = new JSONObject();
+        
+        if(!initCmd.hasOption("uri")){
+        	return;
+        }
+        else{
+        	String uri = initCmd.getOptionValue("uri");
+        	resource.put("uri", uri);
+        }
+        String secret = initCmd.hasOption("secret") ? initCmd.getOptionValue("secret") : "";
+        String name = initCmd.hasOption("name") ? initCmd.getOptionValue("name") : "";
+        String description = initCmd.hasOption("description") ? initCmd.getOptionValue("description") : "";
+        String channel = initCmd.hasOption("channel") ? initCmd.getOptionValue("channel") : "";
+        String owner = initCmd.hasOption("owner") ? initCmd.getOptionValue("owner") : "";
+        
+        String[] tags = {"tag1", "tag2"};
+        resource.put("name", name);            
+       /* resource.put("tags", tags.toString());*/
+        resource.put("description", description);
+        
+        resource.put("channel", channel);
+        resource.put("owner", owner);
+        resource.put("ezserver", null);
+        //create a test publish command
+        command.put("command", "SHARE");
+        command.put("resource", resource.toJSONString());
+        
+        generalReply(command.toJSONString());
     }
 
     public static void generalReply(String request) {
@@ -131,6 +167,7 @@ class Client {
         }
     }
     
+    
     @SuppressWarnings("unchecked")  
     //JSONObject extends HashMap but does not have type parameters as HashMap would expect...
     public static void PublishCmd(CommandLine initCmd) {
@@ -141,13 +178,26 @@ class Client {
         
         //create a test resource
         JSONObject resource = new JSONObject();
-        String[] tags = {"tag1", "tag2"};
-        resource.put("name", "testName");            
+        if(!initCmd.hasOption("uri")){
+        	return;
+        }
+        else{
+        	String uri = initCmd.getOptionValue("uri");
+        	resource.put("uri", uri);
+        }
+        String name = initCmd.hasOption("name") ? initCmd.getOptionValue("name") : "";
+        String description = initCmd.hasOption("description") ? initCmd.getOptionValue("description") : "";
+
+        String channel = initCmd.hasOption("channel") ? initCmd.getOptionValue("channel") : "";
+        String owner = initCmd.hasOption("owner") ? initCmd.getOptionValue("owner") : "";
+        
+        String[] tags = {"tag1", "tag2"};// confused about it
+        
+        resource.put("name", name);            
         resource.put("tags", tags.toString());
-        resource.put("description", "testDescription");
-        resource.put("uri", initCmd.getOptionValue("uri"));
-        resource.put("channel", "testChannel");
-        resource.put("owner", "");
+        resource.put("description", description);
+        resource.put("channel", channel);
+        resource.put("owner",owner );
         resource.put("ezserver", null);
         //create a test publish command
         command.put("command", "PUBLISH");
@@ -166,12 +216,21 @@ class Client {
         
         //create a test resource
         JSONObject resource = new JSONObject();
+        
+        if(!initCmd.hasOption("uri")){
+        	return;
+        }
+        else{
+        	String uri = initCmd.getOptionValue("uri");
+        	resource.put("uri", uri);
+        }
+        
         String[] tags = {"tag1", "tag2"};
-        resource.put("name", "testName");            
-        resource.put("tags", tags.toString());
-        resource.put("description", "testDescription");
-        resource.put("uri", initCmd);
-        resource.put("channel", "testChannel");
+        resource.put("name", "");            
+        resource.put("tags", "");
+        resource.put("description", "");
+
+        resource.put("channel", "");
         resource.put("owner", "");
         resource.put("ezserver", null);
         //create a test publish command
