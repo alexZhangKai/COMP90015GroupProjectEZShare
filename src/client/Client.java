@@ -19,7 +19,7 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import java.util.Arrays;
@@ -95,21 +95,21 @@ class Client {
         } else if (initCmd.hasOption("exchange")) {
             Client.ExchangeCmd(initCmd);
         } else if (initCmd.hasOption("invalidComm")) {
-            Client.InvalidCmd(initCmd);
+            Client.InvalidCmd();
         } else if (initCmd.hasOption("missingComm")) {
-            Client.MissingCmd(initCmd);
+            Client.MissingCmd();
         } else {
             System.out.println("Please use valid arguments.");
         }
     }
      
-    private static void MissingCmd(CommandLine initCmd) {
+    private static void MissingCmd() {
         JSONObject jobj = new JSONObject();
         jobj.put("uwotm8", "blah");
         Client.generalReply(jobj.toString());
     }
 
-    private static void InvalidCmd(CommandLine initCmd) {
+    private static void InvalidCmd() {
         JSONObject jobj = new JSONObject();
         jobj.put("command", "blah");
         Client.generalReply(jobj.toString());
@@ -120,9 +120,34 @@ class Client {
         
     }
 
+    @SuppressWarnings("unchecked")
     private static void QueryCmd(CommandLine initCmd) {
-        // TODO Query command
+        JSONObject req = new JSONObject();
+        JSONObject resource = new JSONObject();
+        String tags = "";
         
+        req.put("command", "QUERY");
+        req.put("relay", true);
+        
+        //Get tags from cmd argument and convert to list
+        resource.put("name", initCmd.hasOption("name")? initCmd.getOptionValue("name") : "");
+        if (initCmd.hasOption("tags")) {
+            String[] tags_arr = initCmd.getOptionValue("tags").split(",");
+            JSONArray tag_list = new JSONArray();
+            for (String tag: tags_arr){
+                tag_list.add(tag);
+            }
+            tags = tag_list.toJSONString();
+        }
+        resource.put("tags", tags);
+        resource.put("description", initCmd.hasOption("description")? initCmd.getOptionValue("description"):"");
+        resource.put("uri", initCmd.hasOption("uri")? initCmd.getOptionValue("uri"):"");
+        resource.put("channel", initCmd.hasOption("uri")? initCmd.getOptionValue("uri"):"");
+        resource.put("owner", initCmd.hasOption("owner")? initCmd.getOptionValue("owner"):"");
+        resource.put("ezserver", null);
+        
+        req.put("resourceTemplate", resource.toJSONString());
+        Client.generalReply(req.toJSONString());
     }
 
     private static void ShareCmd(CommandLine initCmd) {

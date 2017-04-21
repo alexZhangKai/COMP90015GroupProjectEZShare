@@ -87,7 +87,7 @@ public class Connection implements Runnable {
     }
 
     private void query(JSONObject client_request, DataOutputStream output) {
-        // TODO Query method
+        System.out.println(client_request.toJSONString());
         
     }
 
@@ -98,24 +98,25 @@ public class Connection implements Runnable {
 
     @SuppressWarnings("unchecked")
     private void publish(JSONObject client_req, DataOutputStream output) throws ParseException, IOException {
-		JSONParser parser = new JSONParser();
-		JSONObject resourceJSON = (JSONObject) parser.parse((String) client_req.get("resource"));
-		
-		Resource resource = JSONObj2Resource(resourceJSON);
-		
-		boolean result = resourceList.addResource(resource);
-		
-		//create a reply
-		JSONObject reply = new JSONObject();
-		if(result) {
-			reply.put("response", "success");
-		} else {
-			reply.put("reponse", "fail");
-		}
-		
-		//put reply in output stream
-		System.out.println("resourceListSize: " + resourceList.getSize());
-		output.writeUTF(reply.toJSONString());
+        System.out.println(client_req.toJSONString());
+//		JSONParser parser = new JSONParser();
+//		JSONObject resourceJSON = (JSONObject) parser.parse((String) client_req.get("resource"));
+//		
+//		Resource resource = JSONObj2Resource(resourceJSON);
+//		
+//		boolean result = resourceList.addResource(resource);
+//		
+//		//create a reply
+//		JSONObject reply = new JSONObject();
+//		if(result) {
+//			reply.put("response", "success");
+//		} else {
+//			reply.put("reponse", "fail");
+//		}
+//		
+//		//put reply in output stream
+//		System.out.println("resourceListSize: " + resourceList.getSize());
+//		output.writeUTF(reply.toJSONString());
 	}
 	
 	@SuppressWarnings("unchecked")
