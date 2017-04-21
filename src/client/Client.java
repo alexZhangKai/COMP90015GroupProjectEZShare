@@ -49,6 +49,8 @@ class Client {
         argOptions.put("share", false);
         argOptions.put("tags", true);
         argOptions.put("uri", true);
+        argOptions.put("invalidComm", false);
+        argOptions.put("missingComm", false);
     }
     private static Boolean debug = false;
     
@@ -92,11 +94,27 @@ class Client {
             Client.FetchCmd(initCmd);
         } else if (initCmd.hasOption("exchange")) {
             Client.ExchangeCmd(initCmd);
+        } else if (initCmd.hasOption("invalidComm")) {
+            Client.InvalidCmd(initCmd);
+        } else if (initCmd.hasOption("missingComm")) {
+            Client.MissingCmd(initCmd);
         } else {
             System.out.println("Please use valid arguments.");
         }
     }
      
+    private static void MissingCmd(CommandLine initCmd) {
+        JSONObject jobj = new JSONObject();
+        jobj.put("uwotm8", "blah");
+        Client.generalReply(jobj.toString());
+    }
+
+    private static void InvalidCmd(CommandLine initCmd) {
+        JSONObject jobj = new JSONObject();
+        jobj.put("command", "blah");
+        Client.generalReply(jobj.toString());
+    }
+
     private static void ExchangeCmd(CommandLine initCmd) {
         // TODO Exchange command
         
