@@ -65,9 +65,16 @@ public class Connection implements Runnable {
                     break;
 				default:
 					JSONObject reply = new JSONObject();
-					reply.put("error", "unknown_command");
+					reply.put("response", "error");
+					reply.put("errorMessage", "invalid command");
 					output.writeUTF(reply.toJSONString());
 				}
+			}
+			else {
+			    JSONObject reply = new JSONObject();
+			    reply.put("response", "error");
+                reply.put("errorMessage", "missing or incorrect type for command");
+                output.writeUTF(reply.toJSONString());
 			}
 		} catch (IOException | ParseException e) {
 			e.printStackTrace();
@@ -172,11 +179,17 @@ public class Connection implements Runnable {
 		//handle default value here
 		String Name = resource.containsKey("name") ? (String) resource.get("name") : "";
 		String Description = resource.containsKey("description") ? (String) resource.get("description") : "";
-		//String[] Tags is different deal with it later
+		
+		//TODO String[] Tags is different deal with it later
 		String[] Tags = new String[0];
+		
+		//TODO When to check if URI is unique or not for a given channel?
 		String URI = resource.containsKey("uri") ? (String) resource.get("uri") : "";
+		
 		String Channel = resource.containsKey("channel") ? (String) resource.get("channel") : "";
 		String Owner = resource.containsKey("owner") ? (String) resource.get("owner") : "";
+		
+		//TODO Store this server's server:port info - system supplied
 		String EZserver = resource.containsKey("ezserver") ? (String) resource.get("ezserver") : "";
 		
 		return new Resource(Name, Description, Tags, URI, Channel, Owner, EZserver);
