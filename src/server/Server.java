@@ -11,6 +11,7 @@ package server;
 
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -31,6 +32,7 @@ public class Server {
     private static ResourceList resourceList = new ResourceList();
     
     private static final Map<String, Boolean> argOptions;
+	private static ServerSocket socket;
     static{
         argOptions = new HashMap<>();
         argOptions.put("advertisedhostname", true);
@@ -41,7 +43,7 @@ public class Server {
         argOptions.put("debug", false);
     }
     
-    public static void main(String[] args) {
+    public static void main(String[] args) throws SocketException {
         System.out.println("Server has started.");
         
         //Parse CMD options
@@ -69,6 +71,9 @@ public class Server {
         
         //factory for server sockets
         ServerSocketFactory factory = ServerSocketFactory.getDefault();
+        
+        socket = null;
+		socket.setSoTimeout(10*1000);
         
         //Create server socket that auto-closes, and bind to port
         try (ServerSocket server = factory.createServerSocket(port)){
