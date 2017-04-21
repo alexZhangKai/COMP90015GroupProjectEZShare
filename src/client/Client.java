@@ -184,31 +184,43 @@ class Client {
     @SuppressWarnings("unchecked")
     //JSONObject extends HashMap but does not have type parameters as HashMap would expect...
     public static void FetchCmd(CommandLine initCmd) {
-        //TODO Fetch command, remove test code and finalise
+        //parse args or use default value
+        String command = "FETCH";
+        
+        String name = initCmd.hasOption("name") ? initCmd.getOptionValue("name") : "";
+        //String tags = initCmd.hasOption("tags") ? initCmd.getOptionValue("tags") : "";
+        String description = initCmd.hasOption("description") ? initCmd.getOptionValue("description") : "";
+        String channel = initCmd.hasOption("channel") ? initCmd.getOptionValue("channel") : "";
+        String owner = initCmd.hasOption("owner") ? initCmd.getOptionValue("owner") : "";
+        String ezserver = initCmd.hasOption("ezserver") ? initCmd.getOptionValue("ezserver") : "";
+        
+        //Check whether the URI exists
+        if(!initCmd.hasOption("uri")) {
+        	System.out.println("Please provide the URI");
+        }
+        String uri = initCmd.getOptionValue("uri");
         
     	//Create a JSONObject command and send it to server
-        JSONObject command = new JSONObject();
-        
-        //create a test resource
+        JSONObject commandObj = new JSONObject();
         JSONObject resourceTemplate = new JSONObject();
-        String[] tags = {"tag1", "tag2"};
-        resourceTemplate.put("name", "testName");            
-        resourceTemplate.put("tags", tags.toString());
-        resourceTemplate.put("description", "testDescription");
-        resourceTemplate.put("uri", initCmd);
-        resourceTemplate.put("channel", "testChannel");
-        resourceTemplate.put("owner", "");
-        resourceTemplate.put("ezserver", null);
-        //create a test publish command
-        command.put("command", "FETCH");
-        command.put("resourceTemplate", resourceTemplate.toJSONString());
+        
+        resourceTemplate.put("name", name);            
+        //resourceTemplate.put("tags", tags.toString());
+        resourceTemplate.put("description", description);
+        resourceTemplate.put("uri", uri);
+        resourceTemplate.put("channel", channel);
+        resourceTemplate.put("owner", owner);
+        resourceTemplate.put("ezserver", ezserver);
+        
+        commandObj.put("command", command);
+        commandObj.put("resourceTemplate", resourceTemplate.toJSONString());
         
         try (Socket socket = new Socket(ip, port)){
             //Get I/O streams for connection
             DataInputStream input = new DataInputStream(socket.getInputStream());
             DataOutputStream output = new DataOutputStream(socket.getOutputStream());
             //send request
-            output.writeUTF(command.toJSONString());
+            output.writeUTF(commandObj.toJSONString());
             System.out.println("request sent");
             output.flush();
             
