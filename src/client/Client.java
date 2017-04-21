@@ -129,6 +129,7 @@ class Client {
         req.put("command", "QUERY");
         req.put("relay", true);
         
+        //Sub-JSON Object [resourceTemplate]
         //Get tags from cmd argument and convert to list
         resource.put("name", initCmd.hasOption("name")? initCmd.getOptionValue("name") : "");
         if (initCmd.hasOption("tags")) {
@@ -146,7 +147,10 @@ class Client {
         resource.put("owner", initCmd.hasOption("owner")? initCmd.getOptionValue("owner"):"");
         resource.put("ezserver", null);
         
+        //Finalise original, outer, JSON object
         req.put("resourceTemplate", resource.toJSONString());
+        
+        //Send it off to the server
         Client.generalReply(req.toJSONString());
     }
 

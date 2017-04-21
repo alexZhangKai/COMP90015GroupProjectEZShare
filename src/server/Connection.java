@@ -15,6 +15,7 @@ import java.io.*;
 import java.net.*;
 import java.util.Arrays;
 
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -86,9 +87,78 @@ public class Connection implements Runnable {
         
     }
 
-    private void query(JSONObject client_request, DataOutputStream output) {
-        System.out.println(client_request.toJSONString());
-        
+    @SuppressWarnings("unchecked")
+    private void query(JSONObject client_request, DataOutputStream output) throws IOException {                
+        if (client_request.containsKey("resourceTemplate")) {
+            try {
+                Resource in_res;
+                // The following should throw an invalid resource exception
+                in_res = this.JSONObj2Resource((JSONObject) client_request.get("resourceTemplate"));
+                
+                // If there was a resourceTemplate AND the template checked out as a valid Resource, report success
+                JSONObject response = new JSONObject();
+                response.put("response", "success");
+                output.writeUTF(response.toJSONString());
+                
+                int result_cnt = 0;
+                
+                //get results from other servers first if relay == true
+                ResourceList results = new ResourceList();
+                if (client_request.containsKey("relay")) {
+                    if ((Boolean)client_request.get("relay")) {
+                        results = propagateQuery(client_request);
+                        result_cnt += results.getSize();
+                    }
+                }
+                
+                //Query current resource list for resources that match the template
+                for (Resource curr_res: resourceList.getResList()){
+                    if (in_res.getChannel().equals(curr_res.getChannel()) && 
+                            in_res.getOwner().equals(curr_res.getOwner()) &&
+                            in_res.getTags().equals(curr_res.getTags()) &&
+                            in_res.getURI().equals(curr_res.getURI()) &&
+                                (curr_res.getName().contains(in_res.getName()) ||
+                                curr_res.getDescription().contains(in_res.getDescription()))) {
+                        
+                        //Copy current resource into results list if it matches criterion
+                        Resource tempRes = new Resource(curr_res.getName(), curr_res.getDescription(), curr_res.getTags().clone(), 
+                                curr_res.getURI(), curr_res.getChannel(), 
+                                curr_res.getOwner().equals("")? "":"*", curr_res.getEZserver());  //owner is never revealed
+
+                        //Send found resource as JSON to client
+                        results.addResource(tempRes);
+                        result_cnt++;
+                    }
+                }
+                
+                //send each resource to client
+                for (Resource res: results.getResList()){
+                    output.writeUTF(this.Resource2JSONObject(res).toJSONString());
+                }
+                
+                //Send number of results found to server
+                JSONObject result_size = new JSONObject();
+                result_size.put("resultSize", result_cnt);
+                output.writeUTF(result_size.toJSONString());
+                
+            } catch (Exception e) { //invalid resourceTemplate
+                JSONObject inv_res = new JSONObject();
+                inv_res.put("response", "error");
+                inv_res.put("errorMessage", "invalid resourceTemplate");
+                output.writeUTF(inv_res.toJSONString());
+            }            
+        } else {
+            // Missing resource template error - send to client
+            JSONObject error = new JSONObject();
+            error.put("response", "error");
+            error.put("errorMessage", "missing resourceTemplate");
+            output.writeUTF(error.toJSONString());
+        }        
+    }
+
+    private ResourceList propagateQuery(JSONObject client_request) {
+        // TODO Propagate query if relay is true
+        return null;
     }
 
     private void share(JSONObject client_request, DataOutputStream output) {
@@ -98,25 +168,24 @@ public class Connection implements Runnable {
 
     @SuppressWarnings("unchecked")
     private void publish(JSONObject client_req, DataOutputStream output) throws ParseException, IOException {
-        System.out.println(client_req.toJSONString());
-//		JSONParser parser = new JSONParser();
-//		JSONObject resourceJSON = (JSONObject) parser.parse((String) client_req.get("resource"));
-//		
-//		Resource resource = JSONObj2Resource(resourceJSON);
-//		
-//		boolean result = resourceList.addResource(resource);
-//		
-//		//create a reply
-//		JSONObject reply = new JSONObject();
-//		if(result) {
-//			reply.put("response", "success");
-//		} else {
-//			reply.put("reponse", "fail");
-//		}
-//		
-//		//put reply in output stream
-//		System.out.println("resourceListSize: " + resourceList.getSize());
-//		output.writeUTF(reply.toJSONString());
+		JSONParser parser = new JSONParser();
+		JSONObject resourceJSON = (JSONObject) parser.parse((String) client_req.get("resource"));
+		
+		Resource resource = JSONObj2Resource(resourceJSON);
+		
+		boolean result = resourceList.addResource(resource);
+		
+		//create a reply
+		JSONObject reply = new JSONObject();
+		if(result) {
+			reply.put("response", "success");
+		} else {
+			reply.put("reponse", "fail");
+		}
+		
+		//put reply in output stream
+		System.out.println("resourceListSize: " + resourceList.getSize());
+		output.writeUTF(reply.toJSONString());
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -176,6 +245,7 @@ public class Connection implements Runnable {
 		
 	}
 	
+	//TODO this needs to throw an error if JSON is NOT a proper resource i.e. does not contain the required fields
 	private Resource JSONObj2Resource(JSONObject resource) {
 		//handle default value here
 		String Name = resource.containsKey("name") ? (String) resource.get("name") : "";
@@ -194,5 +264,29 @@ public class Connection implements Runnable {
 		String EZserver = resource.containsKey("ezserver") ? (String) resource.get("ezserver") : "";
 		
 		return new Resource(Name, Description, Tags, URI, Channel, Owner, EZserver);
+	}
+	
+	@SuppressWarnings("unchecked")
+    private JSONObject Resource2JSONObject(Resource resource) {
+        JSONObject jobj = new JSONObject();
+	    
+	    //handle default value here
+        jobj.put("name", resource.getName());
+        jobj.put("description", resource.getDescription());
+        jobj.put("name", resource.getName());
+        
+        JSONArray tag_list = new JSONArray();
+        for (String tag: resource.getTags()){
+            tag_list.add(tag);
+        }
+        //TODO should value for "tags" be a string or is a JSONArray okay?
+        jobj.put("tags", tag_list);
+        
+        jobj.put("uri", resource.getURI());
+        jobj.put("channel", resource.getChannel());
+        jobj.put("owner", resource.getOwner());
+        jobj.put("ezserver", resource.getEZserver());
+    
+        return jobj;
 	}
 }
