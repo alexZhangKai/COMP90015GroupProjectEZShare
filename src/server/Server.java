@@ -9,10 +9,15 @@
 
 package server;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import javax.net.ServerSocketFactory;
@@ -22,13 +27,16 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.json.simple.JSONObject;
 
-public class Server {
+public class Server extends TimerTask {
 
     private static final int MAX_THREADS = 2;
     private static int connections_cnt = 0;
     private static int port;
     private static ResourceList resourceList = new ResourceList();
+    private static ServerList serverList = new ServerList();
+    private static String serverSecret;
     
     private static final Map<String, Boolean> argOptions;
     static{
@@ -59,8 +67,9 @@ public class Server {
             e.printStackTrace();
         }
         
-        if (cmd.hasOption("port")) {
+        if (cmd.hasOption("port") && cmd.hasOption("secret")) {
             port = Integer.parseInt(cmd.getOptionValue("port"));
+            serverSecret = cmd.getOptionValue("secret");
         } else {
             System.out.println("Please provide PORT option.");
             System.exit(0);
@@ -74,6 +83,11 @@ public class Server {
         try (ServerSocket server = factory.createServerSocket(port)){
             System.out.println("Waiting for client connection...");
             
+            //Set exchange schema
+            TimerTask timerTask = new Server();
+    		Timer timer = new Timer(true);
+    		timer.scheduleAtFixedRate(timerTask, 0, 600*1000);
+            
             //Keep listening for connections and use a thread pool with 2 threads
             ExecutorService executor = Executors.newFixedThreadPool(MAX_THREADS);
             while (true){
@@ -82,10 +96,36 @@ public class Server {
                 System.out.println("Client " + connections_cnt + " requesting connection.");
                 
                 //Create, and start, a new thread that processes incoming connections
-                executor.submit(new Connection(connections_cnt, client, resourceList));
+                executor.submit(new Connection(connections_cnt, client, resourceList, serverList, serverSecret));
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
+
+    //Send EXCHANGE command every 10 mins
+	@SuppressWarnings("unchecked")
+	@Override
+	public void run() {
+		if(serverList.getLength() > 0) {
+			JSONObject receiver = serverList.select();
+			String ip = (String) receiver.get("hostname");
+			int port = Integer.parseInt((String)receiver.get("port"));
+			try(Socket soc = new Socket(ip, port)){
+				DataInputStream input = new DataInputStream(soc.getInputStream());
+	            DataOutputStream output = new DataOutputStream(soc.getOutputStream());
+	            
+	            JSONObject command = new JSONObject();
+	            command.put("command", "EXCHANGE");
+	            command.put("serverList", serverList.getServerList());
+	            output.writeUTF(command.toJSONString());
+	            output.flush();
+	            //TODO does the server need to deal with this reply?
+			} catch (IOException e) {
+				serverList.remove(receiver);
+				e.printStackTrace();
+			}
+		}		
+	}
+	
 }
