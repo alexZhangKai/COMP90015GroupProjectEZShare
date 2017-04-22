@@ -18,37 +18,55 @@ public class ResourceList {
 		this.resourceList = new ArrayList<Resource>();
 	}
 	
-	public synchronized boolean addResource(Resource newResource) {
-		//Check if resource already exists...
-		if(queryResource(newResource) == -1) {    //...add it if it doesn't.
-			resourceList.add(newResource);
-			return true;
+	public synchronized void addResource(Resource newResource) throws serverException {
+		//Check if resource already exists with same channel and URI
+		Resource match = queryForChannelURI(newResource);
+		if(match.equals(null)) {
+			if(!resourceList.add(newResource)) {
+				throw new serverException("cannot publish resource");
+			}
+		} else {
+			if(!resourceList.remove(match) || !resourceList.add(newResource)) 
+				throw new serverException("cannot publish resource");
 		}
-		return false;
-	}
-	
-	public synchronized boolean removeResource(Resource oldResource) {
-		//Check if resource already exists...
-		int index = queryResource(oldResource);
 		
-		if(index != -1) { //...remove if it does.
-			resourceList.remove(index);
-			return true;
-		}
-		return false;
 	}
 	
-	public int queryResource(Resource re) {
+	public synchronized void removeResource(Resource oldResource) throws serverException {
+		Resource match = queryForPK(oldResource);
+		if(match.equals(null)) {
+			throw new serverException("cannot remove resource");
+		} else {
+			if(!resourceList.remove(match)) throw new serverException("cannot remove resource");
+		}
+	}
+	
+	public Resource queryForPK(Resource re) {
 	    //Check if resource already exists...
 		int len = resourceList.size();
-		if(len == 0) return -1;
+		if(len == 0) return null;
 		
 		for(int i = 0; i < len; i++) {    //...return its position in the list if it does.
-			if(re.equals(resourceList.get(i))) {
-				return i;
+			if(re.getChannel().equals(resourceList.get(i).getChannel()) && 
+				re.getOwner().equals(resourceList.get(i).getOwner()) &&
+				re.getURI().equals(resourceList.get(i).getURI())) {
+				return resourceList.get(i);
 			}
 		}
-		return -1;
+		return null;
+	}
+	
+	public Resource queryForChannelURI(Resource re) {
+		int len = resourceList.size();
+		if(len == 0) return null;
+		
+		for(int i = 0; i < len; i++) {    //...return its position in the list if it does.
+			if((re.getOwner().equals(resourceList.get(i).getOwner())) &&
+					(re.getURI().equals(resourceList.get(i).getURI()))) {
+				return resourceList.get(i);
+			}
+		}
+		return null;
 	}
 	
 	public int getSize() {
