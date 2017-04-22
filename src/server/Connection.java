@@ -75,7 +75,7 @@ public class Connection implements Runnable {
 				output.writeUTF(reply.toJSONString());
 			}	
 		} catch (IOException e) {
-			e.printStackTrace();
+      e.printStackTrace();
 		} catch (ParseException | ClassCastException e) {
 			//TODO can be better?
 			JSONObject reply = new JSONObject();
@@ -115,9 +115,78 @@ public class Connection implements Runnable {
 		}
     }
 
-    private void query(JSONObject client_req, DataOutputStream output) {
-        // TODO Query method
-        
+    @SuppressWarnings("unchecked")
+    private void query(JSONObject client_request, DataOutputStream output) throws IOException {                
+        if (client_request.containsKey("resourceTemplate")) {
+            try {
+                Resource in_res;
+                // The following should throw an invalid resource exception
+                in_res = this.JSONObj2Resource((JSONObject) client_request.get("resourceTemplate"));
+                
+                // If there was a resourceTemplate AND the template checked out as a valid Resource, report success
+                JSONObject response = new JSONObject();
+                response.put("response", "success");
+                output.writeUTF(response.toJSONString());
+                
+                int result_cnt = 0;
+                
+                //get results from other servers first if relay == true
+                ResourceList results = new ResourceList();
+                if (client_request.containsKey("relay")) {
+                    if ((Boolean)client_request.get("relay")) {
+                        results = propagateQuery(client_request);
+                        result_cnt += results.getSize();
+                    }
+                }
+                
+                //Query current resource list for resources that match the template
+                for (Resource curr_res: resourceList.getResList()){
+                    if (in_res.getChannel().equals(curr_res.getChannel()) && 
+                            in_res.getOwner().equals(curr_res.getOwner()) &&
+                            in_res.getTags().equals(curr_res.getTags()) &&
+                            in_res.getURI().equals(curr_res.getURI()) &&
+                                (curr_res.getName().contains(in_res.getName()) ||
+                                curr_res.getDescription().contains(in_res.getDescription()))) {
+                        
+                        //Copy current resource into results list if it matches criterion
+                        Resource tempRes = new Resource(curr_res.getName(), curr_res.getDescription(), curr_res.getTags().clone(), 
+                                curr_res.getURI(), curr_res.getChannel(), 
+                                curr_res.getOwner().equals("")? "":"*", curr_res.getEZserver());  //owner is never revealed
+
+                        //Send found resource as JSON to client
+                        results.addResource(tempRes);
+                        result_cnt++;
+                    }
+                }
+                
+                //send each resource to client
+                for (Resource res: results.getResList()){
+                    output.writeUTF(this.Resource2JSONObject(res).toJSONString());
+                }
+                
+                //Send number of results found to server
+                JSONObject result_size = new JSONObject();
+                result_size.put("resultSize", result_cnt);
+                output.writeUTF(result_size.toJSONString());
+                
+            } catch (Exception e) { //invalid resourceTemplate
+                JSONObject inv_res = new JSONObject();
+                inv_res.put("response", "error");
+                inv_res.put("errorMessage", "invalid resourceTemplate");
+                output.writeUTF(inv_res.toJSONString());
+            }            
+        } else {
+            // Missing resource template error - send to client
+            JSONObject error = new JSONObject();
+            error.put("response", "error");
+            error.put("errorMessage", "missing resourceTemplate");
+            output.writeUTF(error.toJSONString());
+        }        
+    }
+
+    private ResourceList propagateQuery(JSONObject client_request) {
+        // TODO Propagate query if relay is true
+        return null;
     }
 
     @SuppressWarnings("unchecked")
@@ -258,31 +327,48 @@ public class Connection implements Runnable {
 		}
 	}
 	
+	//TODO this needs to throw an error if JSON is NOT a proper resource i.e. does not contain the required fields
 	private Resource JSONObj2Resource(JSONObject resource) throws serverException {
+
 		//handle default value here
 		String Name = resource.containsKey("name") ? (String) resource.get("name") : "";
 		String Description = resource.containsKey("description") ? (String) resource.get("description") : "";
-		//String[] Tags is different deal with it later
+		
+		//TODO String[] Tags is different deal with it later
 		String[] Tags = new String[0];
+		
+		//TODO When to check if URI is unique or not for a given channel?
 		String URI = resource.containsKey("uri") ? (String) resource.get("uri") : "";
+		
 		String Channel = resource.containsKey("channel") ? (String) resource.get("channel") : "";
 		String Owner = resource.containsKey("owner") ? (String) resource.get("owner") : "";
+		
+		//TODO Store this server's server:port info - system supplied
 		String EZserver = resource.containsKey("ezserver") ? (String) resource.get("ezserver") : "";
 		
 		return new Resource(Name, Description, Tags, URI, Channel, Owner, EZserver);
 	}
 	
 	@SuppressWarnings("unchecked")
-	private JSONObject Resource2JSONObject(Resource resource) {
-		JSONObject reJSON = new JSONObject();
-		reJSON.put("name", resource.getName());
-        //reJSON.put("tags", tags);
-		reJSON.put("description", resource.getDescription());
-		reJSON.put("uri", resource.getURI());
-		reJSON.put("channel", resource.getChannel());
-		reJSON.put("owner", resource.getOwner());
-		reJSON.put("ezserver", resource.getEZserver());
-		
-		return reJSON;
+    private JSONObject Resource2JSONObject(Resource resource) {
+        JSONObject jobj = new JSONObject();
+	    
+	    //handle default value here
+        jobj.put("name", resource.getName());
+        jobj.put("description", resource.getDescription());
+        
+        JSONArray tag_list = new JSONArray();
+        for (String tag: resource.getTags()){
+            tag_list.add(tag);
+        }
+        //TODO should value for "tags" be a string or is a JSONArray okay?
+        jobj.put("tags", tag_list);
+        
+        jobj.put("uri", resource.getURI());
+        jobj.put("channel", resource.getChannel());
+        jobj.put("owner", resource.getOwner());
+        jobj.put("ezserver", resource.getEZserver());
+    
+        return jobj;
 	}
 }

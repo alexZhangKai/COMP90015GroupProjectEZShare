@@ -19,7 +19,7 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import java.util.Arrays;
@@ -49,7 +49,10 @@ class Client {
         argOptions.put("share", false);
         argOptions.put("tags", true);
         argOptions.put("uri", true);
+        argOptions.put("invalidComm", false);
+        argOptions.put("missingComm", false);
     }
+    private static Boolean debug = false;
     
     public static void main(String[] args) {
         System.out.println("Client has started.");
@@ -74,6 +77,9 @@ class Client {
             System.out.println("Please provide IP and PORT options");
             System.exit(0);
         }
+        if (initCmd.hasOption("debug")) {
+            debug = true;
+        }
         
         //Decipher command and call respective method
         if (initCmd.hasOption("publish")) {
@@ -88,19 +94,64 @@ class Client {
             Client.FetchCmd(initCmd);
         } else if (initCmd.hasOption("exchange")) {
             Client.ExchangeCmd(initCmd);
+        } else if (initCmd.hasOption("invalidComm")) {
+            Client.InvalidCmd();
+        } else if (initCmd.hasOption("missingComm")) {
+            Client.MissingCmd();
         } else {
             System.out.println("Please use valid arguments.");
         }
     }
      
+    private static void MissingCmd() {
+        JSONObject jobj = new JSONObject();
+        jobj.put("uwotm8", "blah");
+        Client.generalReply(jobj.toString());
+    }
+
+    private static void InvalidCmd() {
+        JSONObject jobj = new JSONObject();
+        jobj.put("command", "blah");
+        Client.generalReply(jobj.toString());
+    }
+
     private static void ExchangeCmd(CommandLine initCmd) {
         // TODO Exchange command
         
     }
 
+    @SuppressWarnings("unchecked")
     private static void QueryCmd(CommandLine initCmd) {
-        // TODO Query command
+        JSONObject req = new JSONObject();
+        JSONObject resource = new JSONObject();
+        String tags = "";
         
+        req.put("command", "QUERY");
+        req.put("relay", true);
+        
+        //Sub-JSON Object [resourceTemplate]
+        //Get tags from cmd argument and convert to list
+        resource.put("name", initCmd.hasOption("name")? initCmd.getOptionValue("name") : "");
+        if (initCmd.hasOption("tags")) {
+            String[] tags_arr = initCmd.getOptionValue("tags").split(",");
+            JSONArray tag_list = new JSONArray();
+            for (String tag: tags_arr){
+                tag_list.add(tag);
+            }
+            tags = tag_list.toJSONString();
+        }
+        resource.put("tags", tags);
+        resource.put("description", initCmd.hasOption("description")? initCmd.getOptionValue("description"):"");
+        resource.put("uri", initCmd.hasOption("uri")? initCmd.getOptionValue("uri"):"");
+        resource.put("channel", initCmd.hasOption("uri")? initCmd.getOptionValue("uri"):"");
+        resource.put("owner", initCmd.hasOption("owner")? initCmd.getOptionValue("owner"):"");
+        resource.put("ezserver", null);
+        
+        //Finalise original, outer, JSON object
+        req.put("resourceTemplate", resource.toJSONString());
+        
+        //Send it off to the server
+        Client.generalReply(req.toJSONString());
     }
 
     private static void ShareCmd(CommandLine initCmd) {
@@ -114,9 +165,12 @@ class Client {
             //Get I/O streams for connection
             DataInputStream input = new DataInputStream(socket.getInputStream());
             DataOutputStream output = new DataOutputStream(socket.getOutputStream());
+            
             //send request
             output.writeUTF(request);
-            System.out.println("request sent");
+            if (debug) {
+                System.out.println("[SENT]: " + request);
+            }
             output.flush();
                         
             while(true) {
