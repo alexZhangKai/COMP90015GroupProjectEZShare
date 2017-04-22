@@ -25,12 +25,14 @@ public class Connection implements Runnable {
 	private Socket client;
 	private ResourceList resourceList;
 	private ServerList serverList;
+	private String serverSecret;
 	
-	public Connection(int id, Socket client, ResourceList resourceList, ServerList serverList) {
+	public Connection(int id, Socket client, ResourceList resourceList, ServerList serverList, String serverSecret) {
 		this.id = id;
 		this.client = client;
 		this.resourceList = resourceList;
 		this.serverList = serverList;
+		this.serverSecret = serverSecret;
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -97,7 +99,6 @@ public class Connection implements Runnable {
 
 	@SuppressWarnings("unchecked")
 	private void exchange(JSONObject client_request, DataOutputStream output) throws IOException {
-        // TODO Handle Cast Exception
 		try{
 			JSONArray newServerList = (JSONArray) client_request.get("serverList");
 			try {
@@ -121,14 +122,37 @@ public class Connection implements Runnable {
 		}
     }
 
-    private void query(JSONObject client_request, DataOutputStream output) {
+    private void query(JSONObject client_req, DataOutputStream output) {
         // TODO Query method
         
     }
 
-    private void share(JSONObject client_request, DataOutputStream output) {
-        // TODO Share method
-        
+    @SuppressWarnings("unchecked")
+    private void share(JSONObject client_req, DataOutputStream output) throws IOException {
+    	JSONParser parser = new JSONParser();
+		try{
+			JSONObject resourceJSON = (JSONObject) parser.parse((String) client_req.get("resource"));
+			Resource resource = JSONObj2Resource(resourceJSON);
+			
+			if(client_req.get("secret").equals(this.serverSecret)) throw new serverException("incorrect secret");
+			
+			resourceList.addResource(resource);
+			
+			//create a reply
+			JSONObject reply = new JSONObject();
+			reply.put("response", "success");
+			output.writeUTF(reply.toJSONString());
+		} catch(ParseException e) {
+			JSONObject reply = new JSONObject();
+			reply.put("response", "error");
+			reply.put("errorMessage", "missing resource");
+			output.writeUTF(reply.toJSONString());
+		} catch(serverException e) {
+			JSONObject reply = new JSONObject();
+			reply.put("response", "error");
+			reply.put("errorMessage", e.toString());
+			output.writeUTF(reply.toJSONString());
+		}
     }
 
     @SuppressWarnings("unchecked")
