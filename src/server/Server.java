@@ -14,7 +14,6 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Timer;
@@ -37,6 +36,7 @@ public class Server extends TimerTask {
     private static int port;
     private static ResourceList resourceList = new ResourceList();
     private static ServerList serverList = new ServerList();
+    private static String serverSecret;
     
     private static final Map<String, Boolean> argOptions;
     static{
@@ -67,8 +67,9 @@ public class Server extends TimerTask {
             e.printStackTrace();
         }
         
-        if (cmd.hasOption("port")) {
+        if (cmd.hasOption("port") && cmd.hasOption("secret")) {
             port = Integer.parseInt(cmd.getOptionValue("port"));
+            serverSecret = cmd.getOptionValue("secret");
         } else {
             System.out.println("Please provide PORT option.");
             System.exit(0);
@@ -95,7 +96,7 @@ public class Server extends TimerTask {
                 System.out.println("Client " + connections_cnt + " requesting connection.");
                 
                 //Create, and start, a new thread that processes incoming connections
-                executor.submit(new Connection(connections_cnt, client, resourceList, serverList));
+                executor.submit(new Connection(connections_cnt, client, resourceList, serverList, serverSecret));
             }
         } catch (Exception e) {
             e.printStackTrace();
