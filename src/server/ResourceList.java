@@ -73,4 +73,9 @@ public class ResourceList {
 		return resourceList.size();
 	}
 	
+	//TODO Is this bad practice? [used for the QUERY command]
+	public ArrayList<Resource> getResList(){
+	    return this.resourceList;
+	}
+	
 }
