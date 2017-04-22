@@ -48,41 +48,35 @@ public class Connection implements Runnable {
 			
 			JSONObject client_request = (JSONObject) parser.parse(input.readUTF());
 			
-			if(client_request.containsKey("command")) {
-				switch((String) client_request.get("command")) {
-				case "PUBLISH":
-					publish(client_request, output);
-					break;
-				case "REMOVE":
-					remove(client_request, output);
-					break;
-				case "SHARE":
-                    share(client_request, output);
-                    break;
-				case "QUERY":
-                    query(client_request, output);
-                    break;
-				case "FETCH":
-					fetch(client_request, output);
-					break;
-				case "EXCHANGE":
-                    exchange(client_request, output);
-                    break;
-				default:
-					JSONObject reply = new JSONObject();
-					reply.put("response", "error");
-					reply.put("errorMessage", "invalid command");
-					output.writeUTF(reply.toJSONString());
-				}
-			} else {
+			if(!client_request.containsKey("command")) throw new ClassCastException();
+			switch((String) client_request.get("command")) {
+			case "PUBLISH":
+				publish(client_request, output);
+				break;
+			case "REMOVE":
+				remove(client_request, output);
+				break;
+			case "SHARE":
+                share(client_request, output);
+                break;
+			case "QUERY":
+                query(client_request, output);
+                break;
+			case "FETCH":
+				fetch(client_request, output);
+				break;
+			case "EXCHANGE":
+                exchange(client_request, output);
+                break;
+			default:
 				JSONObject reply = new JSONObject();
 				reply.put("response", "error");
-				reply.put("errorMessage", "missing or incorrect type for command");
+				reply.put("errorMessage", "invalid command");
 				output.writeUTF(reply.toJSONString());
-			}
+			}	
 		} catch (IOException e) {
 			e.printStackTrace();
-		} catch (ParseException e) {
+		} catch (ParseException | ClassCastException e) {
 			//TODO can be better?
 			JSONObject reply = new JSONObject();
 			reply.put("response", "error");
@@ -93,7 +87,6 @@ public class Connection implements Runnable {
 			} catch (IOException e1) {
 				e1.printStackTrace();
 			}
-			e.printStackTrace();
 		}		
 	}
 
@@ -168,7 +161,7 @@ public class Connection implements Runnable {
 			JSONObject reply = new JSONObject();
 			reply.put("response", "success");
 			output.writeUTF(reply.toJSONString());
-		} catch(ParseException e) {
+		} catch(ParseException | ClassCastException e) {
 			JSONObject reply = new JSONObject();
 			reply.put("response", "error");
 			reply.put("errorMessage", "missing resource");
