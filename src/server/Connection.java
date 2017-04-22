@@ -168,17 +168,31 @@ public class Connection implements Runnable {
 		
 	}
 	
-	private Resource JSONObj2Resource(JSONObject resource) {
-		//handle default value here
-		String Name = resource.containsKey("name") ? (String) resource.get("name") : "";
-		String Description = resource.containsKey("description") ? (String) resource.get("description") : "";
-		//String[] Tags is different deal with it later
-		String[] Tags = new String[0];
-		String URI = resource.containsKey("uri") ? (String) resource.get("uri") : "";
-		String Channel = resource.containsKey("channel") ? (String) resource.get("channel") : "";
-		String Owner = resource.containsKey("owner") ? (String) resource.get("owner") : "";
-		String EZserver = resource.containsKey("ezserver") ? (String) resource.get("ezserver") : "";
+		private Resource JSONObj2Resource(JSONObject resource) throws serverException {
+			//handle default value here
+			String Name = resource.containsKey("name") ? (String) resource.get("name") : "";
+			String Description = resource.containsKey("description") ? (String) resource.get("description") : "";
+			//String[] Tags is different deal with it later
+			String[] Tags = new String[0];
+			String URI = resource.containsKey("uri") ? (String) resource.get("uri") : "";
+			String Channel = resource.containsKey("channel") ? (String) resource.get("channel") : "";
+			String Owner = resource.containsKey("owner") ? (String) resource.get("owner") : "";
+			String EZserver = resource.containsKey("ezserver") ? (String) resource.get("ezserver") : "";
+			
+			return new Resource(Name, Description, Tags, URI, Channel, Owner, EZserver);
+		}
 		
-		return new Resource(Name, Description, Tags, URI, Channel, Owner, EZserver);
-	}
+		@SuppressWarnings("unchecked")
+		private JSONObject Resource2JSONObject(Resource resource) {
+			JSONObject reJSON = new JSONObject();
+			reJSON.put("name", resource.getName());
+	        //reJSON.put("tags", tags);
+			reJSON.put("description", resource.getDescription());
+			reJSON.put("uri", resource.getURI());
+			reJSON.put("channel", resource.getChannel());
+			reJSON.put("owner", resource.getOwner());
+			reJSON.put("ezserver", resource.getEZserver());
+			
+			return reJSON;
+		}
 }
