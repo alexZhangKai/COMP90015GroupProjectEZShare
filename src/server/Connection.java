@@ -369,6 +369,7 @@ public class Connection implements Runnable {
 			throw new serverException("Invalid resource");
 		}
 		
+		//TODO problem with Resource class causing error
 		return new Resource(Name, Description, Tags, URI, Channel, Owner, EZserver);
 	}
 	
