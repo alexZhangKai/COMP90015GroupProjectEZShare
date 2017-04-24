@@ -21,7 +21,7 @@ public class ResourceList {
 	public synchronized void addResource(Resource newResource) throws serverException {
 		//Check if resource already exists with same channel and URI
 		Resource match = queryForChannelURI(newResource);
-		if(match.equals(null)) {
+		if(match == null) {
 			if(!resourceList.add(newResource)) {
 				throw new serverException("cannot publish resource");
 			}
@@ -34,7 +34,7 @@ public class ResourceList {
 	
 	public synchronized void removeResource(Resource oldResource) throws serverException {
 		Resource match = queryForPK(oldResource);
-		if(match.equals(null)) {
+		if(match == null) {
 			throw new serverException("cannot remove resource");
 		} else {
 			if(!resourceList.remove(match)) throw new serverException("cannot remove resource");
