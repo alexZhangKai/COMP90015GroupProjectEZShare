@@ -116,11 +116,47 @@ class Client {
     }
 
     private static void ExchangeCmd(CommandLine initCmd) {
-        // TODO Exchange command
-        
+        // TODO Exchange command        
     }
 
     @SuppressWarnings("unchecked")
+    //JSONObject extends HashMap but does not have type parameters as HashMap would expect...
+    public static void ShareCmd(CommandLine initCmd) {
+        //TODO Share command, finalize and share test code
+        
+    	//Create a JSONObject command and send it to server
+        JSONObject command = new JSONObject();
+        
+        //create a test resource
+        JSONObject resource = new JSONObject();
+        
+        if(!initCmd.hasOption("uri")){
+        	return;
+        }
+        else{
+        	String uri = initCmd.getOptionValue("uri");
+        	resource.put("uri", uri);
+        }
+        String secret = initCmd.hasOption("secret") ? initCmd.getOptionValue("secret") : "";
+        String name = initCmd.hasOption("name") ? initCmd.getOptionValue("name") : "";
+        String description = initCmd.hasOption("description") ? initCmd.getOptionValue("description") : "";
+        String channel = initCmd.hasOption("channel") ? initCmd.getOptionValue("channel") : "";
+        String owner = initCmd.hasOption("owner") ? initCmd.getOptionValue("owner") : "";
+        
+        String[] tags = {"tag1", "tag2"};
+        resource.put("name", name);            
+       /* resource.put("tags", tags.toString());*/
+        resource.put("description", description);
+        
+        resource.put("channel", channel);
+        resource.put("owner", owner);
+        resource.put("ezserver", null);
+        //create a test publish command
+        command.put("command", "SHARE");
+        command.put("resource", resource.toJSONString());
+        
+        generalReply(command.toJSONString());
+
     private static void QueryCmd(CommandLine initCmd) {
         JSONObject req = new JSONObject();
         JSONObject resource = new JSONObject();
@@ -154,17 +190,23 @@ class Client {
         Client.generalReply(req.toJSONString());
     }
 
-    private static void ShareCmd(CommandLine initCmd) {
-        // TODO Share command
-        
-    }
-
     public static void generalReply(String request) {
         //TODO is this still needed?
     	try (Socket socket = new Socket(ip, port)){
             //Get I/O streams for connection
             DataInputStream input = new DataInputStream(socket.getInputStream());
             DataOutputStream output = new DataOutputStream(socket.getOutputStream());
+            //send request
+            output.writeUTF(request);
+            System.out.println("request sent");
+            output.flush();
+                        
+            while(true) {
+            	if(input.available() > 0) {
+            		System.out.println(input.readUTF());
+            		break;
+            	}
+            }
             
             //send request
             output.writeUTF(request);
@@ -179,7 +221,6 @@ class Client {
             		break;
             	}
             }
-            
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -195,15 +236,29 @@ class Client {
         
         //create a test resource
         JSONObject resource = new JSONObject();
-        String[] tags = {"tag1", "tag2"};
-        resource.put("name", "testName");            
+
+        if(!initCmd.hasOption("uri")){
+        	return;
+        }
+        else{
+        	String uri = initCmd.getOptionValue("uri");
+        	resource.put("uri", uri);
+        }
+        String name = initCmd.hasOption("name") ? initCmd.getOptionValue("name") : "";
+        String description = initCmd.hasOption("description") ? initCmd.getOptionValue("description") : "";
+
+        String channel = initCmd.hasOption("channel") ? initCmd.getOptionValue("channel") : "";
+        String owner = initCmd.hasOption("owner") ? initCmd.getOptionValue("owner") : "";
+        
+        String[] tags = {"tag1", "tag2"};// confused about it
+        
+        resource.put("name", name);            
         resource.put("tags", tags.toString());
-        resource.put("description", "testDescription");
-        resource.put("uri", initCmd.getOptionValue("uri"));
-        resource.put("channel", "testChannel");
-        resource.put("owner", "");
+        resource.put("description", description);
+        resource.put("channel", channel);
+        resource.put("owner",owner );
         resource.put("ezserver", null);
-        //create a test publish command
+
         command.put("command", "PUBLISH");
         command.put("resource", resource.toJSONString());
         
@@ -220,12 +275,21 @@ class Client {
         
         //create a test resource
         JSONObject resource = new JSONObject();
+        
+        if(!initCmd.hasOption("uri")){
+        	return;
+        }
+        else{
+        	String uri = initCmd.getOptionValue("uri");
+        	resource.put("uri", uri);
+        }
+        
         String[] tags = {"tag1", "tag2"};
-        resource.put("name", "testName");            
-        resource.put("tags", tags.toString());
-        resource.put("description", "testDescription");
-        resource.put("uri", initCmd);
-        resource.put("channel", "testChannel");
+        resource.put("name", "");            
+        resource.put("tags", "");
+        resource.put("description", "");
+
+        resource.put("channel", "");
         resource.put("owner", "");
         resource.put("ezserver", null);
         //create a test publish command

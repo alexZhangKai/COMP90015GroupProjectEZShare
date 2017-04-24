@@ -16,6 +16,7 @@ import java.net.*;
 import java.util.Arrays;
 
 import org.json.simple.JSONArray;
+
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -329,7 +330,6 @@ public class Connection implements Runnable {
 	
 	//TODO this needs to throw an error if JSON is NOT a proper resource i.e. does not contain the required fields
 	private Resource JSONObj2Resource(JSONObject resource) throws serverException {
-
 		//handle default value here
 		String Name = resource.containsKey("name") ? (String) resource.get("name") : "";
 		if (Name.contains("\0")) {

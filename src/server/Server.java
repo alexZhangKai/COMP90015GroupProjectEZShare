@@ -49,6 +49,17 @@ public class Server extends TimerTask {
         argOptions.put("debug", false);
     }
     
+    private static final Map<String, Boolean> argOptions;
+    static{
+        argOptions = new HashMap<>();
+        argOptions.put("advertisedhostname", true);
+        argOptions.put("connectionintervallimit", true);
+        argOptions.put("exchangeinterval", true);
+        argOptions.put("port", true);
+        argOptions.put("secret", true);
+        argOptions.put("debug", false);
+    }
+    
     public static void main(String[] args) {
         System.out.println("Server has started.");
         
