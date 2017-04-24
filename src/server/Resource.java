@@ -28,14 +28,12 @@ public class Resource {
 		this.Channel = Channel;
 		this.Owner = Owner;
 		this.EZserver = EZserver;
-	}
-	
+	}	
 	public Resource(Resource res){
 	    this(res.getName(), res.getDescription(), res.getTags().clone(), res.getURI(), 
 	            res.getChannel(), res.getOwner(), res.getEZserver());
 	}
 
-	
 	//Each resource is uniquely identified by its channel, owner and URI; thus compare
     @Override
     public boolean equals(Object obj) {

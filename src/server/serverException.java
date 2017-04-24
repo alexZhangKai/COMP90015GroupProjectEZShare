@@ -1,3 +1,12 @@
+/*
+ * Distributed Systems
+ * Group Project 1
+ * Sem 1, 2017
+ * Group: AALT
+ * 
+ * Class that deals defines serverException and error message
+ */
+
 package server;
 
 public class serverException extends Exception {
