@@ -14,8 +14,11 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
@@ -37,6 +40,8 @@ public class Server extends TimerTask {
     private static ResourceList resourceList = new ResourceList();
     private static ServerList serverList = new ServerList();
     private static String serverSecret;
+    private static HashMap<String, Long> clientIPList = new HashMap<String, Long>();
+    private static long intervalLimit = 1*1000;
     
     private static final Map<String, Boolean> argOptions;
     static{
@@ -97,12 +102,25 @@ public class Server extends TimerTask {
             //Set exchange schema
             TimerTask timerTask = new Server();
     		Timer timer = new Timer(true);
-    		timer.scheduleAtFixedRate(timerTask, 0, 600*1000);
+    		timer.scheduleAtFixedRate(timerTask, 1, 600*1000);
             
             //Keep listening for connections and use a thread pool with 2 threads
             ExecutorService executor = Executors.newFixedThreadPool(MAX_THREADS);
             while (true){
                 Socket client = server.accept();
+                
+                //check connection interval time limit
+                String clientIP = client.getInetAddress().toString();
+                if(clientIPList.containsKey(clientIP)) {
+                	if((System.currentTimeMillis() - clientIPList.get(clientIP)) > intervalLimit) {
+                		clientIPList.put(clientIP, System.currentTimeMillis());
+                	} else {
+                		throw new serverException("break connection interval limit");
+                	}
+                } else {
+                	clientIPList.put(clientIP, System.currentTimeMillis());
+                }
+                
                 connections_cnt++;
                 System.out.println("Client " + connections_cnt + " requesting connection.");
                 
@@ -121,7 +139,7 @@ public class Server extends TimerTask {
 		if(serverList.getLength() > 0) {
 			JSONObject receiver = serverList.select();
 			String ip = (String) receiver.get("hostname");
-			int port = Integer.parseInt((String)receiver.get("port"));
+			int port = (int) receiver.get("port");
 			try(Socket soc = new Socket(ip, port)){
 				DataInputStream input = new DataInputStream(soc.getInputStream());
 	            DataOutputStream output = new DataOutputStream(soc.getOutputStream());
@@ -137,6 +155,18 @@ public class Server extends TimerTask {
 				e.printStackTrace();
 			}
 		}		
+	}
+	
+	@SuppressWarnings("rawtypes")
+	private void updateClientIPList() {
+		Iterator<Entry<String, Long>> it = clientIPList.entrySet().iterator();
+	    while (it.hasNext()) {
+	        Map.Entry pair = (Map.Entry)it.next();
+	        if((System.currentTimeMillis() - (long)pair.getValue()) > intervalLimit) {
+	        	clientIPList.remove(pair.getKey());
+	        }
+	        it.remove(); // avoids a ConcurrentModificationException
+	    }
 	}
 	
 }

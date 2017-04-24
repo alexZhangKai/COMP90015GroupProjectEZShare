@@ -185,6 +185,7 @@ class Client {
         
         //Finalise original, outer, JSON object
         req.put("resourceTemplate", resource.toJSONString());
+        System.out.println(req.toJSONString());
         
         //Send it off to the server
         Client.generalReply(req.toJSONString());
@@ -208,6 +209,9 @@ class Client {
             	}
             }
             
+            //record start time
+            long startTime = System.currentTimeMillis();
+            
             //send request
             output.writeUTF(request);
             if (debug) {
@@ -218,6 +222,8 @@ class Client {
             while(true) {
             	if(input.available() > 0) {
             		System.out.println(input.readUTF());
+            	}
+            	if ((System.currentTimeMillis() - startTime) > 5*1000){
             		break;
             	}
             }
@@ -337,6 +343,10 @@ class Client {
             //Get I/O streams for connection
             DataInputStream input = new DataInputStream(socket.getInputStream());
             DataOutputStream output = new DataOutputStream(socket.getOutputStream());
+            
+            //record start time
+            long start = System.currentTimeMillis();
+            
             //send request
             output.writeUTF(commandObj.toJSONString());
             System.out.println("request sent");
@@ -382,9 +392,15 @@ class Client {
             			System.out.println("File received!");
             			downloadingFile.close();
             		}
+            		
             		//the last reply: resultSize
             		if(reply.containsKey("resultSize")) {
             			System.out.println(reply.toJSONString());
+            		}
+            		
+            		//connection timeout
+            		if((System.currentTimeMillis() - start) > 5*1000) {
+            			break;
             		}
             	}
             }
