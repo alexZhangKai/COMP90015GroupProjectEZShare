@@ -17,57 +17,64 @@ public class ResourceList {
 	public ResourceList() {
 		this.resourceList = new ArrayList<Resource>();
 	}
-	
-	public synchronized String addResource(Resource newResource) {
-		//Check if resource already exists...
-		String response="";
-		int index = queryResource(newResource);
-		if(index == -1) {    //...add it if it doesn't.
-			resourceList.add(newResource);
-			response = "success";
+  
+	public synchronized void addResource(Resource newResource) throws serverException {
+		//Check if resource already exists with same channel and URI
+		Resource match = queryForChannelURI(newResource);
+		if(match.equals(null)) {
+			if(!resourceList.add(newResource)) {
+				throw new serverException("cannot publish resource");
+			}
+		} else {
+			if(!resourceList.remove(match) || !resourceList.add(newResource)) 
+				throw new serverException("cannot publish resource");
 		}
-		
-		else if(index != -1) {  //remove existing resource and add new resource
-			resourceList.remove(index);
-			resourceList.add(newResource);
-			response = "success";
-	
-		}
-		
-	
-		
-		// else if(5) 
-			
-		return response;
 		
 	}
 	
-	public synchronized boolean removeResource(Resource oldResource) {
-		//Check if resource already exists...
-		int index = queryResource(oldResource);
-		
-		if(index != -1) { //...remove if it does.
-			resourceList.remove(index);
-			return true;
+	public synchronized void removeResource(Resource oldResource) throws serverException {
+		Resource match = queryForPK(oldResource);
+		if(match.equals(null)) {
+			throw new serverException("cannot remove resource");
+		} else {
+			if(!resourceList.remove(match)) throw new serverException("cannot remove resource");
 		}
-		return false;
 	}
-	
-	public int queryResource(Resource re) {
+
+	public Resource queryForPK(Resource re) {
 	    //Check if resource already exists...
 		int len = resourceList.size();
-		if(len == 0) return -1;
+		if(len == 0) return null;
 		
 		for(int i = 0; i < len; i++) {    //...return its position in the list if it does.
-			if(re.equals(resourceList.get(i))) {
-				return i;
+			if(re.getChannel().equals(resourceList.get(i).getChannel()) && 
+				re.getOwner().equals(resourceList.get(i).getOwner()) &&
+				re.getURI().equals(resourceList.get(i).getURI())) {
+				return resourceList.get(i);
 			}
 		}
-		return -1;
+		return null;
+	}
+	
+	public Resource queryForChannelURI(Resource re) {
+		int len = resourceList.size();
+		if(len == 0) return null;
+		
+		for(int i = 0; i < len; i++) {    //...return its position in the list if it does.
+			if((re.getOwner().equals(resourceList.get(i).getOwner())) &&
+					(re.getURI().equals(resourceList.get(i).getURI()))) {
+				return resourceList.get(i);
+			}
+		}
+		return null;
 	}
 	
 	public int getSize() {
 		return resourceList.size();
 	}
 	
+	//TODO Is this bad practice? [used for the QUERY command]
+	public ArrayList<Resource> getResList(){
+	    return this.resourceList;
+	}
 }
