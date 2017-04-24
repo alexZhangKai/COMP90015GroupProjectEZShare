@@ -17,7 +17,7 @@ public class ResourceList {
 	public ResourceList() {
 		this.resourceList = new ArrayList<Resource>();
 	}
-	
+  
 	public synchronized void addResource(Resource newResource) throws serverException {
 		//Check if resource already exists with same channel and URI
 		Resource match = queryForChannelURI(newResource);
@@ -40,7 +40,7 @@ public class ResourceList {
 			if(!resourceList.remove(match)) throw new serverException("cannot remove resource");
 		}
 	}
-	
+
 	public Resource queryForPK(Resource re) {
 	    //Check if resource already exists...
 		int len = resourceList.size();
@@ -77,5 +77,4 @@ public class ResourceList {
 	public ArrayList<Resource> getResList(){
 	    return this.resourceList;
 	}
-	
 }

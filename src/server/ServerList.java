@@ -18,7 +18,7 @@ public class ServerList {
 			
 			//Check validation
 			InetAddress.getByName((String) newServer.get("hostname"));
-			int port = (int)newServer.get("port");
+			int port = (int) newServer.get("port");
 			if(port < 0 || port > 65535) {
 				throw new serverException("invaild server record");
 			}
@@ -34,7 +34,7 @@ public class ServerList {
 	
 	public JSONObject select() {
 		if(serverList.size() > 0) {
-			int random = ThreadLocalRandom.current().nextInt(0, serverList.size()-1);
+			int random = ThreadLocalRandom.current().nextInt(0, serverList.size());
 			return (JSONObject) serverList.get(random);
 		}
 		return null;

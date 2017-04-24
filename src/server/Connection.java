@@ -16,6 +16,7 @@ import java.net.*;
 import java.util.Arrays;
 
 import org.json.simple.JSONArray;
+
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -331,23 +332,53 @@ public class Connection implements Runnable {
 	
 	//TODO this needs to throw an error if JSON is NOT a proper resource i.e. does not contain the required fields
 	private Resource JSONObj2Resource(JSONObject resource) throws serverException {
-
 		//handle default value here
 		String Name = resource.containsKey("name") ? (String) resource.get("name") : "";
+		if (Name.contains("\0")) {
+			throw new serverException("Invalid resource");
+		}
 		String Description = resource.containsKey("description") ? (String) resource.get("description") : "";
+		if (Description.contains("\0")) {
+			throw new serverException("Invalid resource");
+		}
 		
-		//TODO String[] Tags is different deal with it later
-		String[] Tags = new String[0];
+		//TODO String[] Tags is different deal with it later - unsure about check
+		JSONArray[] Tags = new JSONArray[0];
+		if (Tags.length == 0) {
+			throw new serverException("Invalid resource");
+		}
 		
 		//TODO When to check if URI is unique or not for a given channel?
 		String URI = resource.containsKey("uri") ? (String) resource.get("uri") : "";
+		if (URI.contains("\0")) {
+			throw new serverException("Invalid resource");
+		}
+		
+		try {
+			URI uri = new URI(URI);
+		}
+		catch (URISyntaxException e) {
+			throw new serverException("Invalid resrouce");
+		}
+		
 		
 		String Channel = resource.containsKey("channel") ? (String) resource.get("channel") : "";
+		if (Channel.contains("\0")) {
+			throw new serverException("Invalid resource");
+		}
+		
 		String Owner = resource.containsKey("owner") ? (String) resource.get("owner") : "";
+		if ((Owner.contains("\0")) || (Owner.contains("*"))) {
+			throw new serverException("Invalid resource");
+		}
 		
 		//TODO Store this server's server:port info - system supplied
 		String EZserver = resource.containsKey("ezserver") ? (String) resource.get("ezserver") : "";
+		if (EZserver.contains("\0")) {
+			throw new serverException("Invalid resource");
+		}
 		
+		//TODO problem with Resource class causing error
 		return new Resource(Name, Description, Tags, URI, Channel, Owner, EZserver);
 	}
 	
