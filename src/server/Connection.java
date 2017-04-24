@@ -352,6 +352,13 @@ public class Connection implements Runnable {
 			throw new serverException("Invalid resource");
 		}
 		
+		try {
+			URI uri = new URI(URI);
+		}
+		catch (URISyntaxException e) {
+			throw new serverException("Invalid resrouce");
+		}
+		
 		
 		String Channel = resource.containsKey("channel") ? (String) resource.get("channel") : "";
 		if (Channel.contains("\0")) {
