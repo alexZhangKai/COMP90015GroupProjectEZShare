@@ -120,8 +120,10 @@ public class Connection implements Runnable {
         if (client_request.containsKey("resourceTemplate")) {
             try {
                 Resource in_res;
+                JSONParser parser = new JSONParser();
+                
                 // The following should throw an invalid resource exception
-                in_res = this.JSONObj2Resource((JSONObject) client_request.get("resourceTemplate"));
+                in_res = this.JSONObj2Resource((JSONObject) parser.parse((String)client_request.get("resourceTemplate")));
                 
                 // If there was a resourceTemplate AND the template checked out as a valid Resource, report success
                 JSONObject response = new JSONObject();
@@ -134,7 +136,7 @@ public class Connection implements Runnable {
                 ResourceList results = new ResourceList();
                 if (client_request.containsKey("relay")) {
                     if ((Boolean)client_request.get("relay")) {
-                        results = propagateQuery(client_request);
+//                        results = propagateQuery(client_request);
                         result_cnt += results.getSize();
                     }
                 }
@@ -143,7 +145,7 @@ public class Connection implements Runnable {
                 for (Resource curr_res: resourceList.getResList()){
                     if (in_res.getChannel().equals(curr_res.getChannel()) && 
                             in_res.getOwner().equals(curr_res.getOwner()) &&
-                            in_res.getTags().equals(curr_res.getTags()) &&
+//                            in_res.getTags().equals(curr_res.getTags()) &&
                             in_res.getURI().equals(curr_res.getURI()) &&
                                 (curr_res.getName().contains(in_res.getName()) ||
                                 curr_res.getDescription().contains(in_res.getDescription()))) {
