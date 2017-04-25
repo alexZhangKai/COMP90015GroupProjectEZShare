@@ -21,11 +21,14 @@ public class ResourceList {
 	public synchronized void addResource(Resource newResource) throws serverException {
 		//Check if resource already exists with same channel and URI
 		Resource match = queryForChannelURI(newResource);
+		
 		if(match == null) {
 			if(!resourceList.add(newResource)) {
 				throw new serverException("cannot publish resource");
 			}
 		} else {
+			if(!match.getOwner().equals(newResource.getOwner()))
+				throw new serverException("cannot publish resource");
 			if(!resourceList.remove(match) || !resourceList.add(newResource)) 
 				throw new serverException("cannot publish resource");
 		}

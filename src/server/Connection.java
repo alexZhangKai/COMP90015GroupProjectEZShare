@@ -81,7 +81,6 @@ public class Connection implements Runnable {
 		} catch (IOException e) {
       e.printStackTrace();
 		} catch (ParseException | ClassCastException e) {
-			//TODO can be better?
 			JSONObject reply = new JSONObject();
 			reply.put("response", "error");
 			reply.put("errorMessage", "missing or incorrect type for command");
@@ -96,32 +95,34 @@ public class Connection implements Runnable {
 
 	@SuppressWarnings("unchecked")
 	private void exchange(JSONObject client_request, DataOutputStream output) throws IOException {
+		JSONArray newServerList = new JSONArray();
 		try{
-			JSONArray newServerList = (JSONArray) client_request.get("serverList");
-			try {
-				this.serverList.update(newServerList);
-				JSONObject reply = new JSONObject();
-		        reply.put("response", "success");
-		        output.writeUTF(reply.toJSONString());
-			} catch (NumberFormatException | ClassCastException | UnknownHostException | serverException e) {
-				JSONObject reply = new JSONObject();
-				reply.put("response", "error");
-				reply.put("errorMessage", "invaild server record");
-				output.writeUTF(reply.toJSONString());
-				e.printStackTrace();
-			}
-        
-		} catch (ClassCastException e) {
+			JSONParser parser = new JSONParser();
+			newServerList = (JSONArray) parser.parse((String) client_request.get("serverList"));
+		} catch (ClassCastException | ParseException e) {
 			JSONObject reply = new JSONObject();
 			reply.put("response", "error");
 			reply.put("errorMessage", "missing or invaild server list");
 			output.writeUTF(reply.toJSONString());
 		}
+		try {
+			this.serverList.update(newServerList);
+			JSONObject reply = new JSONObject();
+	        reply.put("response", "success");
+	        output.writeUTF(reply.toJSONString());
+		} catch (NumberFormatException | ClassCastException | UnknownHostException | serverException e) {
+			JSONObject reply = new JSONObject();
+			reply.put("response", "error");
+			reply.put("errorMessage", "invaild server record");
+			output.writeUTF(reply.toJSONString());
+			e.printStackTrace();
+		}
     }
 
     @SuppressWarnings("unchecked")
     private void query(JSONObject client_request, DataOutputStream output) throws IOException {                
-        if (client_request.containsKey("resourceTemplate")) {
+/*
+    	if (client_request.containsKey("resourceTemplate")) {
             try {
                 Resource in_res;
                 JSONParser parser = new JSONParser();
@@ -160,7 +161,7 @@ public class Connection implements Runnable {
                                 curr_res.getOwner().equals("")? "":"*", curr_res.getEZserver());  //owner is never revealed
 
                         //Send found resource as JSON to client
-                        results.addResource(tempRes);
+                        //results.addResource(tempRes);
                         result_cnt++;
                     }
                 }
@@ -187,7 +188,8 @@ public class Connection implements Runnable {
             error.put("response", "error");
             error.put("errorMessage", "missing resourceTemplate");
             output.writeUTF(error.toJSONString());
-        }        
+        }  
+        */      
     }
 
     private boolean compareTags(List<String> in_res, List<String> curr_res) {
@@ -220,37 +222,74 @@ public class Connection implements Runnable {
     private void share(JSONObject client_req, DataOutputStream output) throws IOException {
     	JSONParser parser = new JSONParser();
 		try{
+			//throw class cast exception for missing resource and\/or secret
 			JSONObject resourceJSON = (JSONObject) parser.parse((String) client_req.get("resource"));
+			if(!client_req.containsKey("secret")) throw new ClassCastException();
+			
+			//throw server exception invalid resource
 			Resource resource = JSONObj2Resource(resourceJSON);
 			
-			if(client_req.get("secret").equals(this.serverSecret)) throw new serverException("incorrect secret");
+			URI uri = resource.getURI();
+			//check if URI is provided
+			if(uri.toString().equals("")) throw new serverException("invalid resource");
 			
+			//check if URI is a file scheme
+			boolean isWeb = "http".equalsIgnoreCase(uri.getScheme())
+				    || "https".equalsIgnoreCase(uri.getScheme());
+			if(isWeb) throw new serverException("invalid resource");
+			
+			//check if the file exist
+			//TODO uncomment when submit
+			//File f = new File(uri.toString());
+			//if(!f.exists()) throw new serverException("invalid resource");
+			
+			//check if secret is equal
+			if(!client_req.get("secret").equals(this.serverSecret)) throw new serverException("incorrect secret");
+			
+			//throw cannot publish resource
 			resourceList.addResource(resource);
 			
 			//create a reply
 			JSONObject reply = new JSONObject();
 			reply.put("response", "success");
 			output.writeUTF(reply.toJSONString());
-		} catch(ParseException e) {
+		} catch(ParseException | ClassCastException e) {
 			JSONObject reply = new JSONObject();
 			reply.put("response", "error");
-			reply.put("errorMessage", "missing resource");
+			reply.put("errorMessage", "missing resource and/or secret");
 			output.writeUTF(reply.toJSONString());
 		} catch(serverException e) {
 			JSONObject reply = new JSONObject();
 			reply.put("response", "error");
-			reply.put("errorMessage", e.toString());
+			if(e.toString().equals("connot publish resource")) {
+				reply.put("errorMessage", "cannot share resource");
+			} else {
+				reply.put("errorMessage", e.toString());
+			}
 			output.writeUTF(reply.toJSONString());
 		}
     }
 
     @SuppressWarnings("unchecked")
     private void publish(JSONObject client_req, DataOutputStream output) throws IOException {
-		JSONParser parser = new JSONParser();
+    	JSONParser parser = new JSONParser();
 		try{
+			//throw class cast exception for missing resource
 			JSONObject resourceJSON = (JSONObject) parser.parse((String) client_req.get("resource"));
+			
+			//throw server exception invalid resource
 			Resource resource = JSONObj2Resource(resourceJSON);
 			
+			URI uri = resource.getURI();
+			//check if URI is provided
+			if(uri.toString().equals("")) throw new serverException("invalid resource");
+			
+			//check if URI is a URL
+			boolean isWeb = "http".equalsIgnoreCase(uri.getScheme())
+				    || "https".equalsIgnoreCase(uri.getScheme());
+			if(!isWeb) throw new serverException("invalid resource");
+			
+			//throw cannot publish resource
 			resourceList.addResource(resource);
 			
 			//create a reply
@@ -274,16 +313,20 @@ public class Connection implements Runnable {
     private void remove(JSONObject client_req, DataOutputStream output) throws IOException {
 		JSONParser parser = new JSONParser();
 		try{
+			//throw class cast exception for missing resource
 			JSONObject resourceJSON = (JSONObject) parser.parse((String) client_req.get("resource"));
+			
+			//throw server exception invalid resource
 			Resource resource = JSONObj2Resource(resourceJSON);
 			
+			//throw server exception cannot remove resource
 			resourceList.removeResource(resource);
 			
 			//create a reply
 			JSONObject reply = new JSONObject();
 			reply.put("response", "success");
 			output.writeUTF(reply.toJSONString());
-		} catch(ParseException e) {
+		} catch(ParseException | ClassCastException e) {
 			JSONObject reply = new JSONObject();
 			reply.put("response", "error");
 			reply.put("errorMessage", "missing resource");
@@ -297,18 +340,19 @@ public class Connection implements Runnable {
 	}
 	
 	@SuppressWarnings("unchecked")
-    private void fetch(JSONObject command, DataOutputStream output) throws IOException{
+    private void fetch(JSONObject client_req, DataOutputStream output) throws IOException{
 		JSONParser parser = new JSONParser();
-		JSONObject resourceJSON;
-		try {
-			resourceJSON = (JSONObject) parser.parse((String) command.get("resourceTemplate"));
-		
+		try{
+			//throw class cast exception for missing resource
+			JSONObject resourceJSON = (JSONObject) parser.parse((String) client_req.get("resource"));
+			
+			//throw server exception invalid resource
 			Resource resourceTemplate = JSONObj2Resource(resourceJSON);
 		
 			Resource match = resourceList.queryForChannelURI(resourceTemplate);
 		
 			//handle no match error
-			if(match.equals(null)) {
+			if(match == null) {
 				JSONObject reply = new JSONObject();
 				reply.put("response", "error");
 				reply.put("errorMessage", "no match resource");
@@ -318,7 +362,7 @@ public class Connection implements Runnable {
 		
 			//Use a known URI, need to check the file afterward ? 
 			URI uri = match.getUri();
-			File f = new File(uri);
+			File f = new File(uri.toString());
 			if(f.exists()) {
 				JSONObject reponse = new JSONObject();
 				reponse.put("response", "success");
@@ -341,7 +385,7 @@ public class Connection implements Runnable {
 				resultFile.put("resultSize", 1);
 				output.writeUTF(resultFile.toJSONString());
 			}
-		} catch (ParseException e) {
+		} catch (ParseException | ClassCastException e) {
 			JSONObject reply = new JSONObject();
 			reply.put("response", "error");
 			reply.put("errorMessage", "missing resourceTemplate");
@@ -349,7 +393,11 @@ public class Connection implements Runnable {
 		} catch (serverException e) {
 			JSONObject reply = new JSONObject();
 			reply.put("response", "error");
-			reply.put("errorMessage", e.toString());
+			if(e.toString().equals("invalid resource")) {
+				reply.put("errorMessage", "invalid resourceTemplate");
+			} else {
+				reply.put("errorMessage", e.toString());
+			}
 			output.writeUTF(reply.toJSONString());
 		}
 	}
@@ -391,35 +439,28 @@ public class Connection implements Runnable {
 			throw new serverException("Invalid resrouce");
 		}
 		
-		
 		String Channel = resource.containsKey("channel") ? (String) resource.get("channel") : "";
 		if (Channel.contains("\0")) {
 			throw new serverException("Invalid resource");
 		}
 		
 		String Owner = resource.containsKey("owner") ? (String) resource.get("owner") : "";
-		if ((Owner.contains("\0")) || (Owner.contains("*"))) {
+		if (Owner.contains("\0") || Owner.contains("*")) {
 			throw new serverException("Invalid resource");
 		}
 		
 		//TODO Store this server's server:port info - system supplied
 		String EZserver = resource.containsKey("ezserver") ? (String) resource.get("ezserver") : "";
-		if (EZserver == null) {
-            EZserver = "";
-        }
-		if (EZserver.contains("\0")) {
+		if (EZserver != null && EZserver.contains("\0")) {
 			throw new serverException("Invalid resource");
 		}
-		
-		//TODO problem with Resource class causing error
 		return new Resource(Name, Description, tags_slist, uri, Channel, Owner, EZserver);
 	}
 	
 	@SuppressWarnings("unchecked")
     private JSONObject Resource2JSONObject(Resource resource) {
         JSONObject jobj = new JSONObject();
-	    
-	    //handle default value here
+
         jobj.put("name", resource.getName());
         jobj.put("description", resource.getDescription());
         
