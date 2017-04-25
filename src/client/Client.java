@@ -29,6 +29,7 @@ import java.util.Map;
 class Client {
     private static String ip;
     private static int port;
+    private static final int NUM_SEC = 3;
     private static final Map<String, Boolean> argOptions;
     static{
         argOptions = new HashMap<>();
@@ -170,18 +171,7 @@ class Client {
             //Get I/O streams for connection
             DataInputStream input = new DataInputStream(socket.getInputStream());
             DataOutputStream output = new DataOutputStream(socket.getOutputStream());
-            //send request
-            output.writeUTF(request);
-            System.out.println("request sent");
-            output.flush();
-                        
-            while(true) {
-            	if(input.available() > 0) {
-            		System.out.println(input.readUTF());
-            		break;
-            	}
-            }
-            
+
             //record start time
             long startTime = System.currentTimeMillis();
             
@@ -196,7 +186,7 @@ class Client {
             	if(input.available() > 0) {
             		System.out.println(input.readUTF());
             	}
-            	if ((System.currentTimeMillis() - startTime) > 5*1000){
+            	if ((System.currentTimeMillis() - startTime) > NUM_SEC*1000){
             		break;
             	}
             }

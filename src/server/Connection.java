@@ -24,11 +24,13 @@ import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
 public class Connection implements Runnable {
-	private int id;
+	private static final int NUM_SEC = 1;
+    private int id;
 	private Socket client;
 	private ResourceList resourceList;
 	private ServerList serverList;
 	private String serverSecret;
+	private Boolean debug = true;
 	
 	public Connection(int id, Socket client, ResourceList resourceList, ServerList serverList, String serverSecret) {
 		this.id = id;
@@ -140,7 +142,7 @@ public class Connection implements Runnable {
                 ResourceList results = new ResourceList();
                 if (client_request.containsKey("relay")) {
                     if ((Boolean)client_request.get("relay")) {
-//                        results = propagateQuery(client_request);
+//                        results = propagateQuery(client_request, in_res);
                         result_cnt += results.getSize();
                     }
                 }
@@ -220,10 +222,64 @@ public class Connection implements Runnable {
         return true;
     }
 
-    @SuppressWarnings("unused")
-    private ResourceList propagateQuery(JSONObject client_request) {
-        // TODO Propagate query if relay is true
-        return null;
+    @SuppressWarnings({ "unused", "unchecked" })
+    private ResourceList propagateQuery(JSONObject client_request, Resource in_res) throws ParseException, UnknownHostException, IOException, serverException {
+        ResourceList prop_results = new ResourceList();
+        
+        //construct the right query
+        JSONParser parser = new JSONParser();
+        JSONObject res = (JSONObject) parser.parse((String)client_request.get("resourceTemplate"));
+        JSONObject command = new JSONObject();
+        
+        //remove owner and channel and set to "" + relay = false
+        command.put("command", "QUERY");
+        command.put("relay", false);
+            res.put("owner", "");
+            res.put("channel", "");
+        command.put("resourceTemplate", res.toJSONString());
+
+        //TODO implement this as threads, instead of sequential
+        //for each server from server list
+        JSONArray serv_list = serverList.getServerList();
+        for (int i = 0; i < serv_list.size(); i++) {
+
+            //Get server details
+            JSONObject server = (JSONObject)serv_list.get(i);
+            String hostname = (String)server.get("hostname");
+            int port = (int) server.get("port");            
+            
+            //Send QUERY command to that server
+            Socket socket = new Socket(hostname, port);
+            //Get I/O streams for connection
+            DataInputStream input = new DataInputStream(socket.getInputStream());
+            DataOutputStream output = new DataOutputStream(socket.getOutputStream());
+            
+            //record start time
+            long startTime = System.currentTimeMillis();
+            
+            //send request
+            output.writeUTF(command.toJSONString());
+            if (debug) {
+                System.out.println("[SENT]: " + command);
+            }
+            output.flush();
+                        
+            while(true) {
+                if(input.available() > 0) {
+                    //get results and store in results list
+                    JSONObject temp_response = (JSONObject) parser.parse((String) input.readUTF());
+                    if (temp_response.containsKey("uri")) {
+                        Resource temp_res = this.JSONObj2Resource(temp_response);
+                        prop_results.addResource(temp_res);
+                    }
+                }
+                if ((System.currentTimeMillis() - startTime) > NUM_SEC*1000){
+                    break;
+                }
+            }
+            socket.close();
+        }               
+        return prop_results;
     }
 
     @SuppressWarnings("unchecked")

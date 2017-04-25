@@ -83,8 +83,7 @@ public class Server extends TimerTask {
         //Create server socket that auto-closes, and bind to port
         try (ServerSocket server = factory.createServerSocket(port)){
             System.out.println("Waiting for client connection...");
-            
-            //TODO exchange process was causing issues in testing, disabled for now. 
+             
             //Set exchange schema
             TimerTask timerTask = new Server();
     		Timer timer = new Timer(true);
