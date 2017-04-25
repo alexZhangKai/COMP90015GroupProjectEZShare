@@ -9,6 +9,7 @@
 
 package server;
 
+@SuppressWarnings("serial")
 public class serverException extends Exception {
 	private String errorMsg;
 	

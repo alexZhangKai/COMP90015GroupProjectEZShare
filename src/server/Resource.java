@@ -9,31 +9,33 @@
 
 package server;
 
-import org.json.simple.JSONArray;
+import java.util.ArrayList;
+import java.util.List;
 import java.net.URI;
+
 //Instantiate for each resource in ResourceList
 public class Resource {
 	private String Name;
 	private String Description;
-	private JSONArray Tags;
-	private URI URI;
+	private List<String> Tags;
+	private URI uri;
 	private String Channel;
 	private String Owner;
 	private String EZserver;
 	
-	public Resource(String Name, String Description, JSONArray Tags, 
-			URI URI, String Channel, String Owner, String EZserver) {
+	public Resource(String Name, String Description, List<String> Tags, 
+			URI uri, String Channel, String Owner, String EZserver) {
 		this.Name = Name;
 		this.Description = Description;
-		this.Tags = Tags;
-		this.URI = URI;
+		this.Tags = new ArrayList<>(Tags);
+		this.uri = uri;
 		this.Channel = Channel;
 		this.Owner = Owner;
 		this.EZserver = EZserver;
 	}
 	
 	public Resource(Resource res){
-	    this(res.getName(), res.getDescription(), (JSONArray) res.getTags().clone(), res.getURI(), 
+	    this(res.getName(), res.getDescription(), res.getTags(), res.getUri(), 
 	            res.getChannel(), res.getOwner(), res.getEZserver());
 	}
 
@@ -57,10 +59,10 @@ public class Resource {
                 return false;
         } else if (!Owner.equals(other.Owner))
             return false;
-        if (URI == null) {
-            if (other.URI != null)
+        if (uri == null) {
+            if (other.uri != null)
                 return false;
-        } else if (!URI.equals(other.URI))
+        } else if (!uri.equals(other.uri))
             return false;
         return true;
     }
@@ -73,8 +75,8 @@ public class Resource {
 		return this.Channel;
 	}
 	
-	public URI getURI() {
-		return this.URI;
+	public URI getUri() {
+		return this.uri;
 	}
 
     public String getName() {
@@ -85,7 +87,7 @@ public class Resource {
         return Description;
     }
 
-    public JSONArray getTags() {
+    public List<String> getTags() {
         return Tags;
     }
 

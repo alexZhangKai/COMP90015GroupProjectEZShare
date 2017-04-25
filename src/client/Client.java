@@ -29,6 +29,7 @@ import java.util.Map;
 class Client {
     private static String ip;
     private static int port;
+    private static final int NUM_SEC = 3;
     private static final Map<String, Boolean> argOptions;
     static{
         argOptions = new HashMap<>();
@@ -94,11 +95,29 @@ class Client {
             Client.FetchCmd(initCmd);
         } else if (initCmd.hasOption("exchange")) {
             Client.ExchangeCmd(initCmd);
+        } else if (initCmd.hasOption("invalidComm")) {
+            Client.InvalidCmd();
+        } else if (initCmd.hasOption("missingComm")) {
+            Client.MissingCmd();
         } else {
             System.out.println("Please use valid arguments.");
         }
     }
-
+     
+    @SuppressWarnings("unchecked")
+    private static void MissingCmd() {
+        JSONObject jobj = new JSONObject();
+        jobj.put("uwotm8", "blah");
+        Client.generalReply(jobj.toString());
+    }
+        
+    @SuppressWarnings("unchecked")
+    private static void InvalidCmd() {
+        JSONObject jobj = new JSONObject();
+        jobj.put("command", "blah");
+        Client.generalReply(jobj.toString());   
+    }
+    
     @SuppressWarnings("unchecked")
 	private static void ExchangeCmd(CommandLine initCmd) {
     	JSONObject command = new JSONObject();
@@ -116,6 +135,7 @@ class Client {
     	command.put("serverList", servers.toJSONString());
     	generalReply(command.toJSONString());
     }
+    
     @SuppressWarnings("unchecked")
     public static void ShareCmd(CommandLine initCmd) {
     	//Create a JSONObject command and send it to server
@@ -133,8 +153,13 @@ class Client {
     @SuppressWarnings("unchecked")
     private static void QueryCmd(CommandLine initCmd) {
         JSONObject command = new JSONObject();
+        
+        //TODO Likely cannot use this method to construct the template as it may NOT have a URI
         JSONObject resourceTemplate = createResJSONObj(initCmd);
+        
+        //TODO remove these returns in favour of proper error handling.
         if(resourceTemplate == null) return;
+        
         command.put("command", "QUERY");
         command.put("relay", true);
         command.put("resourceTemplate", resourceTemplate.toJSONString());
@@ -146,18 +171,7 @@ class Client {
             //Get I/O streams for connection
             DataInputStream input = new DataInputStream(socket.getInputStream());
             DataOutputStream output = new DataOutputStream(socket.getOutputStream());
-            //send request
-            output.writeUTF(request);
-            System.out.println("request sent");
-            output.flush();
-                        
-            while(true) {
-            	if(input.available() > 0) {
-            		System.out.println(input.readUTF());
-            		break;
-            	}
-            }
-            
+
             //record start time
             long startTime = System.currentTimeMillis();
             
@@ -172,7 +186,7 @@ class Client {
             	if(input.available() > 0) {
             		System.out.println(input.readUTF());
             	}
-            	if ((System.currentTimeMillis() - startTime) > 5*1000){
+            	if ((System.currentTimeMillis() - startTime) > NUM_SEC*1000){
             		break;
             	}
             }
@@ -185,29 +199,34 @@ class Client {
     private static JSONObject createResJSONObj(CommandLine initCmd) {
     	JSONObject resource = new JSONObject();
     	
-        if(!initCmd.hasOption("uri")) {
-        	System.out.println("Provide URI for publish.");
-        	return null;
-        }
-       	String uri = initCmd.getOptionValue("uri");
-        JSONArray tags = new JSONArray();
-        if(initCmd.hasOption("tag")) {
-        	String[] tagsArr = initCmd.getOptionValue("tags").split(",");
-        	for(String tag : tagsArr) {
-        		tags.add(tag);
-        	}
-        }
+    	//TODO There will not ALWAYS be a URI e.g. in the case of Query
+//        if(!initCmd.hasOption("uri")) {
+//        	System.out.println("Provide URI for publish.");
+//        	return null;
+//        }
+       	String uri = initCmd.hasOption("uri")? initCmd.getOptionValue("uri") : "";
         String name = initCmd.hasOption("name") ? initCmd.getOptionValue("name") : "";
+        
+        JSONArray tag_list = new JSONArray();
+        if (initCmd.hasOption("tags")) {
+            String[] tags_arr = initCmd.getOptionValue("tags").split(",");
+            tag_list = new JSONArray();
+            for (String tag: tags_arr){
+                tag_list.add(tag);
+            }
+            //tags = tag_list.toJSONString();
+        }
+        
         String description = initCmd.hasOption("description") ? initCmd.getOptionValue("description") : "";
         String channel = initCmd.hasOption("channel") ? initCmd.getOptionValue("channel") : "";
         String owner = initCmd.hasOption("owner") ? initCmd.getOptionValue("owner") : "";
-        
+                
         resource.put("name", name);            
-        resource.put("tags", tags.toJSONString());
+        resource.put("tags", tag_list);
         resource.put("description", description);
         resource.put("uri", uri);
         resource.put("channel", channel);
-        resource.put("owner",owner );
+        resource.put("owner", owner);
         resource.put("ezserver", null);
         
         return resource;

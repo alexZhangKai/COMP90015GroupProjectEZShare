@@ -52,7 +52,7 @@ public class ResourceList {
 		for(int i = 0; i < len; i++) {    //...return its position in the list if it does.
 			if(re.getChannel().equals(resourceList.get(i).getChannel()) && 
 				re.getOwner().equals(resourceList.get(i).getOwner()) &&
-				re.getURI().equals(resourceList.get(i).getURI())) {
+				re.getUri().equals(resourceList.get(i).getUri())) {
 				return resourceList.get(i);
 			}
 		}
@@ -64,8 +64,8 @@ public class ResourceList {
 		if(len == 0) return null;
 		
 		for(int i = 0; i < len; i++) {    //...return its position in the list if it does.
-			if((re.getChannel().equals(resourceList.get(i).getChannel())) &&
-					(re.getURI().equals(resourceList.get(i).getURI()))) {
+			if((re.getOwner().equals(resourceList.get(i).getOwner())) &&
+					(re.getUri().equals(resourceList.get(i).getUri()))) {
 				return resourceList.get(i);
 			}
 		}

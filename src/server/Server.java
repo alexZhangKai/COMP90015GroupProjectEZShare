@@ -83,7 +83,7 @@ public class Server extends TimerTask {
         //Create server socket that auto-closes, and bind to port
         try (ServerSocket server = factory.createServerSocket(port)){
             System.out.println("Waiting for client connection...");
-            
+             
             //Set exchange schema
             TimerTask timerTask = new Server();
     		Timer timer = new Timer(true);
@@ -153,6 +153,7 @@ public class Server extends TimerTask {
 	/*
 	 * don't use this method or we have to make the clientIPList synchronized
 	private void updateClientIPList() {
+	    //TODO Update client IP list method not used - needs to be implemented?
 		Iterator<Entry<String, Long>> it = clientIPList.entrySet().iterator();
 	    while (it.hasNext()) {
 	        Map.Entry pair = (Map.Entry)it.next();

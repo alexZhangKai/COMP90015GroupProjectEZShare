@@ -13,7 +13,9 @@ package server;
 
 import java.io.*;
 import java.net.*;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import org.json.simple.JSONArray;
 
@@ -22,11 +24,13 @@ import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
 public class Connection implements Runnable {
-	private int id;
+	private static final int NUM_SEC = 1;
+    private int id;
 	private Socket client;
 	private ResourceList resourceList;
 	private ServerList serverList;
 	private String serverSecret;
+	private Boolean debug = true;
 	
 	public Connection(int id, Socket client, ResourceList resourceList, ServerList serverList, String serverSecret) {
 		this.id = id;
@@ -118,7 +122,7 @@ public class Connection implements Runnable {
 
     @SuppressWarnings("unchecked")
     private void query(JSONObject client_request, DataOutputStream output) throws IOException {                
-/*
+
     	if (client_request.containsKey("resourceTemplate")) {
             try {
                 Resource in_res;
@@ -138,7 +142,7 @@ public class Connection implements Runnable {
                 ResourceList results = new ResourceList();
                 if (client_request.containsKey("relay")) {
                     if ((Boolean)client_request.get("relay")) {
-//                        results = propagateQuery(client_request);
+//                        results = propagateQuery(client_request, in_res);
                         result_cnt += results.getSize();
                     }
                 }
@@ -147,18 +151,18 @@ public class Connection implements Runnable {
                 for (Resource curr_res: resourceList.getResList()){
                     if (in_res.getChannel().equals(curr_res.getChannel()) && 
                             in_res.getOwner().equals(curr_res.getOwner()) &&
-//                            in_res.getTags().equals(curr_res.getTags()) &&
-                            in_res.getURI().equals(curr_res.getURI()) &&
+                            compareTags(in_res.getTags(), curr_res.getTags()) &&
+                            compareUri(in_res.getUri(), curr_res.getUri()) &&
                                 (curr_res.getName().contains(in_res.getName()) ||
                                 curr_res.getDescription().contains(in_res.getDescription()))) {
                         
                         //Copy current resource into results list if it matches criterion
-                        Resource tempRes = new Resource(curr_res.getName(), curr_res.getDescription(), curr_res.getTags().clone(), 
-                                curr_res.getURI(), curr_res.getChannel(), 
+                        Resource tempRes = new Resource(curr_res.getName(), curr_res.getDescription(), curr_res.getTags(), 
+                                curr_res.getUri(), curr_res.getChannel(), 
                                 curr_res.getOwner().equals("")? "":"*", curr_res.getEZserver());  //owner is never revealed
 
                         //Send found resource as JSON to client
-                        //results.addResource(tempRes);
+                        results.addResource(tempRes);
                         result_cnt++;
                     }
                 }
@@ -185,13 +189,97 @@ public class Connection implements Runnable {
             error.put("response", "error");
             error.put("errorMessage", "missing resourceTemplate");
             output.writeUTF(error.toJSONString());
-        }  
-        */      
+        }      
     }
 
-    private ResourceList propagateQuery(JSONObject client_request) {
-        // TODO Propagate query if relay is true
-        return null;
+    //Compare the two URIs for Query purposes. If the incoming URI has no host i.e. is empty, it should match all URIs
+    //...otherwise only an exact match is acceptable
+    private boolean compareUri(URI in_uri, URI curr_uri) {
+        if (in_uri.getHost() == null) {
+            return true;
+        } else {
+            return in_uri.equals(curr_uri);
+        }
+    }
+
+    private boolean compareTags(List<String> in_res, List<String> curr_res) {
+        if (in_res.size() == 0 && curr_res.size() == 0) {
+            return true;
+        }
+        else if (in_res.size() == 0 && curr_res.size() != 0){
+            return false;
+        }
+        else if (in_res.size() != 0 && curr_res.size() == 0){
+            return false;
+        }
+        else {
+            for (String tag: in_res){
+                if (!curr_res.contains(tag)) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    @SuppressWarnings({ "unused", "unchecked" })
+    private ResourceList propagateQuery(JSONObject client_request, Resource in_res) throws ParseException, UnknownHostException, IOException, serverException {
+        ResourceList prop_results = new ResourceList();
+        
+        //construct the right query
+        JSONParser parser = new JSONParser();
+        JSONObject res = (JSONObject) parser.parse((String)client_request.get("resourceTemplate"));
+        JSONObject command = new JSONObject();
+        
+        //remove owner and channel and set to "" + relay = false
+        command.put("command", "QUERY");
+        command.put("relay", false);
+            res.put("owner", "");
+            res.put("channel", "");
+        command.put("resourceTemplate", res.toJSONString());
+
+        //TODO implement this as threads, instead of sequential
+        //for each server from server list
+        JSONArray serv_list = serverList.getServerList();
+        for (int i = 0; i < serv_list.size(); i++) {
+
+            //Get server details
+            JSONObject server = (JSONObject)serv_list.get(i);
+            String hostname = (String)server.get("hostname");
+            int port = (int) server.get("port");            
+            
+            //Send QUERY command to that server
+            Socket socket = new Socket(hostname, port);
+            //Get I/O streams for connection
+            DataInputStream input = new DataInputStream(socket.getInputStream());
+            DataOutputStream output = new DataOutputStream(socket.getOutputStream());
+            
+            //record start time
+            long startTime = System.currentTimeMillis();
+            
+            //send request
+            output.writeUTF(command.toJSONString());
+            if (debug) {
+                System.out.println("[SENT]: " + command);
+            }
+            output.flush();
+                        
+            while(true) {
+                if(input.available() > 0) {
+                    //get results and store in results list
+                    JSONObject temp_response = (JSONObject) parser.parse((String) input.readUTF());
+                    if (temp_response.containsKey("uri")) {
+                        Resource temp_res = this.JSONObj2Resource(temp_response);
+                        prop_results.addResource(temp_res);
+                    }
+                }
+                if ((System.currentTimeMillis() - startTime) > NUM_SEC*1000){
+                    break;
+                }
+            }
+            socket.close();
+        }               
+        return prop_results;
     }
 
     @SuppressWarnings("unchecked")
@@ -205,7 +293,7 @@ public class Connection implements Runnable {
 			//throw server exception invalid resource
 			Resource resource = JSONObj2Resource(resourceJSON);
 			
-			URI uri = resource.getURI();
+			URI uri = resource.getUri();
 			//check if URI is provided
 			if(uri.toString().equals("")) throw new serverException("invalid resource");
 			
@@ -256,7 +344,7 @@ public class Connection implements Runnable {
 			//throw server exception invalid resource
 			Resource resource = JSONObj2Resource(resourceJSON);
 			
-			URI uri = resource.getURI();
+			URI uri = resource.getUri();
 			//check if URI is provided
 			if(uri.toString().equals("")) throw new serverException("invalid resource");
 			
@@ -337,8 +425,8 @@ public class Connection implements Runnable {
 			}
 		
 			//Use a known URI, need to check the file afterward ? 
-			URI URI = match.getURI();
-			File f = new File(URI.toString());
+			URI uri = match.getUri();
+			File f = new File(uri.toString());
 			if(f.exists()) {
 				JSONObject reponse = new JSONObject();
 				reponse.put("response", "success");
@@ -378,6 +466,8 @@ public class Connection implements Runnable {
 		}
 	}
 	
+	//TODO this needs to throw an error if JSON is NOT a proper resource i.e. does not contain the required fields
+	//TODO Also check for null values when key exists!
 	private Resource JSONObj2Resource(JSONObject resource) throws serverException {
 		//handle default value here
 		String Name = resource.containsKey("name") ? (String) resource.get("name") : "";
@@ -389,23 +479,25 @@ public class Connection implements Runnable {
 			throw new serverException("Invalid resource");
 		}
 		
-		JSONArray Tags = new JSONArray();
-		JSONParser parser = new JSONParser();
-		if(resource.containsKey("tags")) {
-			try{
-				Tags = (JSONArray) parser.parse((String) resource.get("tags"));
-			} catch (ClassCastException | ParseException e) {
-				throw new serverException("Invalid resrouce");
-			}
+		//TODO String[] Tags is different deal with it later - unsure about check
+		JSONArray tags_jarr = resource.containsKey("tags")? (JSONArray) resource.get("tags") : null;
+		List<String> tags_slist = new ArrayList<String>();
+		
+		if (tags_jarr.size() != 0) {
+		    for (Object tag: tags_jarr){
+		        tags_slist.add((String) tag);
+		    }
 		}
 		
-		String URI = resource.containsKey("uri") ? (String) resource.get("uri") : "";
-		if (URI.contains("\0")) {
+		
+		//TODO When to check if URI is unique or not for a given channel?
+		String uri_s = resource.containsKey("uri") ? (String) resource.get("uri") : "";
+		if (uri_s.contains("\0")) {
 			throw new serverException("Invalid resource");
 		}
 		URI uri;
 		try {
-			uri = new URI(URI);
+			uri = new URI(uri_s);
 		}
 		catch (URISyntaxException e) {
 			throw new serverException("Invalid resrouce");
@@ -426,8 +518,7 @@ public class Connection implements Runnable {
 		if (EZserver != null && EZserver.contains("\0")) {
 			throw new serverException("Invalid resource");
 		}
-
-		return new Resource(Name, Description, Tags, uri, Channel, Owner, EZserver);
+		return new Resource(Name, Description, tags_slist, uri, Channel, Owner, EZserver);
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -436,8 +527,15 @@ public class Connection implements Runnable {
 
         jobj.put("name", resource.getName());
         jobj.put("description", resource.getDescription());
-        jobj.put("tags", resource.getTags().toJSONString());
-        jobj.put("uri", resource.getURI().toString());
+        
+        JSONArray tag_list = new JSONArray();
+        for (String tag: resource.getTags()){
+            tag_list.add(tag);
+        }
+        //TODO should value for "tags" be a string or is a JSONArray okay?
+        jobj.put("tags", tag_list);
+        
+        jobj.put("uri", resource.getUri());
         jobj.put("channel", resource.getChannel());
         jobj.put("owner", resource.getOwner());
         jobj.put("ezserver", resource.getEZserver());
