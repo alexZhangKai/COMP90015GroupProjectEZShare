@@ -9,18 +9,20 @@
 
 package server;
 
+import org.json.simple.JSONArray;
+import java.net.URI;
 //Instantiate for each resource in ResourceList
 public class Resource {
 	private String Name;
 	private String Description;
-	private String[] Tags;
-	private String URI;
+	private JSONArray Tags;
+	private URI URI;
 	private String Channel;
 	private String Owner;
 	private String EZserver;
 	
-	public Resource(String Name, String Description, String[] Tags, 
-			String URI, String Channel, String Owner, String EZserver) {
+	public Resource(String Name, String Description, JSONArray Tags, 
+			URI URI, String Channel, String Owner, String EZserver) {
 		this.Name = Name;
 		this.Description = Description;
 		this.Tags = Tags;
@@ -28,9 +30,10 @@ public class Resource {
 		this.Channel = Channel;
 		this.Owner = Owner;
 		this.EZserver = EZserver;
-	}	
+	}
+	
 	public Resource(Resource res){
-	    this(res.getName(), res.getDescription(), res.getTags().clone(), res.getURI(), 
+	    this(res.getName(), res.getDescription(), (JSONArray) res.getTags().clone(), res.getURI(), 
 	            res.getChannel(), res.getOwner(), res.getEZserver());
 	}
 
@@ -70,7 +73,7 @@ public class Resource {
 		return this.Channel;
 	}
 	
-	public String getURI() {
+	public URI getURI() {
 		return this.URI;
 	}
 
@@ -82,7 +85,7 @@ public class Resource {
         return Description;
     }
 
-    public String[] getTags() {
+    public JSONArray getTags() {
         return Tags;
     }
 

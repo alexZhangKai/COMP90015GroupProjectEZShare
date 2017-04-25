@@ -94,105 +94,54 @@ class Client {
             Client.FetchCmd(initCmd);
         } else if (initCmd.hasOption("exchange")) {
             Client.ExchangeCmd(initCmd);
-        } else if (initCmd.hasOption("invalidComm")) {
-            Client.InvalidCmd();
-        } else if (initCmd.hasOption("missingComm")) {
-            Client.MissingCmd();
         } else {
             System.out.println("Please use valid arguments.");
         }
     }
-     
-    private static void MissingCmd() {
-        JSONObject jobj = new JSONObject();
-        jobj.put("uwotm8", "blah");
-        Client.generalReply(jobj.toString());
-    }
-
-    private static void InvalidCmd() {
-        JSONObject jobj = new JSONObject();
-        jobj.put("command", "blah");
-        Client.generalReply(jobj.toString());
-    }
-
-    private static void ExchangeCmd(CommandLine initCmd) {
-        // TODO Exchange command        
-    }
 
     @SuppressWarnings("unchecked")
-    //JSONObject extends HashMap but does not have type parameters as HashMap would expect...
+	private static void ExchangeCmd(CommandLine initCmd) {
+    	JSONObject command = new JSONObject();
+    	if(!initCmd.hasOption("servers")) return;
+    	String[] serversArr = initCmd.getOptionValue("servers").split(",");
+    	JSONArray servers = new JSONArray();
+    	for(String server : serversArr) {
+    		String[] hostAndPort = server.split(":");
+    		JSONObject ele = new JSONObject();
+    		ele.put("host", hostAndPort[0]);
+    		ele.put("port", hostAndPort[1]);
+    		servers.add(ele);
+    	}
+    	command.put("command", "EXCHANGE");
+    	command.put("serverList", servers.toJSONString());
+    	generalReply(command.toJSONString());
+    }
+    @SuppressWarnings("unchecked")
     public static void ShareCmd(CommandLine initCmd) {
-        //TODO Share command, finalize and share test code
-        
     	//Create a JSONObject command and send it to server
         JSONObject command = new JSONObject();
-        
-        //create a test resource
-        JSONObject resource = new JSONObject();
-        
-        if(!initCmd.hasOption("uri")){
-        	return;
-        }
-        else{
-        	String uri = initCmd.getOptionValue("uri");
-        	resource.put("uri", uri);
-        }
-        String secret = initCmd.hasOption("secret") ? initCmd.getOptionValue("secret") : "";
-        String name = initCmd.hasOption("name") ? initCmd.getOptionValue("name") : "";
-        String description = initCmd.hasOption("description") ? initCmd.getOptionValue("description") : "";
-        String channel = initCmd.hasOption("channel") ? initCmd.getOptionValue("channel") : "";
-        String owner = initCmd.hasOption("owner") ? initCmd.getOptionValue("owner") : "";
-        
-        String[] tags = {"tag1", "tag2"};
-        resource.put("name", name);            
-       /* resource.put("tags", tags.toString());*/
-        resource.put("description", description);
-        
-        resource.put("channel", channel);
-        resource.put("owner", owner);
-        resource.put("ezserver", null);
-        //create a test publish command
+        JSONObject resource = createResJSONObj(initCmd);
+        if(resource == null) return;
+        if(!initCmd.hasOption("secret")) return;
+        String secret = initCmd.getOptionValue("secret");
         command.put("command", "SHARE");
+        command.put("secret", secret);
         command.put("resource", resource.toJSONString());
-        
         generalReply(command.toJSONString());
-
+    }
+    
+    @SuppressWarnings("unchecked")
     private static void QueryCmd(CommandLine initCmd) {
-        JSONObject req = new JSONObject();
-        JSONObject resource = new JSONObject();
-        String tags = "";
-        
-        req.put("command", "QUERY");
-        req.put("relay", true);
-        
-        //Sub-JSON Object [resourceTemplate]
-        //Get tags from cmd argument and convert to list
-        resource.put("name", initCmd.hasOption("name")? initCmd.getOptionValue("name") : "");
-        if (initCmd.hasOption("tags")) {
-            String[] tags_arr = initCmd.getOptionValue("tags").split(",");
-            JSONArray tag_list = new JSONArray();
-            for (String tag: tags_arr){
-                tag_list.add(tag);
-            }
-            tags = tag_list.toJSONString();
-        }
-        resource.put("tags", tags);
-        resource.put("description", initCmd.hasOption("description")? initCmd.getOptionValue("description"):"");
-        resource.put("uri", initCmd.hasOption("uri")? initCmd.getOptionValue("uri"):"");
-        resource.put("channel", initCmd.hasOption("uri")? initCmd.getOptionValue("uri"):"");
-        resource.put("owner", initCmd.hasOption("owner")? initCmd.getOptionValue("owner"):"");
-        resource.put("ezserver", null);
-        
-        //Finalise original, outer, JSON object
-        req.put("resourceTemplate", resource.toJSONString());
-        System.out.println(req.toJSONString());
-        
-        //Send it off to the server
-        Client.generalReply(req.toJSONString());
+        JSONObject command = new JSONObject();
+        JSONObject resourceTemplate = createResJSONObj(initCmd);
+        if(resourceTemplate == null) return;
+        command.put("command", "QUERY");
+        command.put("relay", true);
+        command.put("resourceTemplate", resourceTemplate.toJSONString());
+        generalReply(command.toJSONString());
     }
 
     public static void generalReply(String request) {
-        //TODO is this still needed?
     	try (Socket socket = new Socket(ip, port)){
             //Get I/O streams for connection
             DataInputStream input = new DataInputStream(socket.getInputStream());
@@ -233,111 +182,65 @@ class Client {
     }
     
     @SuppressWarnings("unchecked")  
-    //JSONObject extends HashMap but does not have type parameters as HashMap would expect...
-    public static void PublishCmd(CommandLine initCmd) {
-        //TODO Publish command, remove testing code
-        
-        //Create a JSONObject command and send it to server
-        JSONObject command = new JSONObject();
-        
-        //create a test resource
-        JSONObject resource = new JSONObject();
-
-        if(!initCmd.hasOption("uri")){
-        	return;
+    private static JSONObject createResJSONObj(CommandLine initCmd) {
+    	JSONObject resource = new JSONObject();
+    	
+        if(!initCmd.hasOption("uri")) {
+        	System.out.println("Provide URI for publish.");
+        	return null;
         }
-        else{
-        	String uri = initCmd.getOptionValue("uri");
-        	resource.put("uri", uri);
+       	String uri = initCmd.getOptionValue("uri");
+        JSONArray tags = new JSONArray();
+        if(initCmd.hasOption("tag")) {
+        	String[] tagsArr = initCmd.getOptionValue("tags").split(",");
+        	for(String tag : tagsArr) {
+        		tags.add(tag);
+        	}
         }
         String name = initCmd.hasOption("name") ? initCmd.getOptionValue("name") : "";
         String description = initCmd.hasOption("description") ? initCmd.getOptionValue("description") : "";
-
         String channel = initCmd.hasOption("channel") ? initCmd.getOptionValue("channel") : "";
         String owner = initCmd.hasOption("owner") ? initCmd.getOptionValue("owner") : "";
         
-        String[] tags = {"tag1", "tag2"};// confused about it
-        
         resource.put("name", name);            
-        resource.put("tags", tags.toString());
+        resource.put("tags", tags.toJSONString());
         resource.put("description", description);
+        resource.put("uri", uri);
         resource.put("channel", channel);
         resource.put("owner",owner );
         resource.put("ezserver", null);
-
+        
+        return resource;
+    }
+    
+    @SuppressWarnings("unchecked")  
+    public static void PublishCmd(CommandLine initCmd) {
+        //Create a JSONObject command and send it to server
+        JSONObject command = new JSONObject();
+        JSONObject resource = createResJSONObj(initCmd);
+        if(resource == null) return;
         command.put("command", "PUBLISH");
         command.put("resource", resource.toJSONString());
-        
         generalReply(command.toJSONString());
     }
     
     @SuppressWarnings("unchecked")
-    //JSONObject extends HashMap but does not have type parameters as HashMap would expect...
     public static void RemoveCmd(CommandLine initCmd) {
-        //TODO Remove command, finalize and remove test code
-        
-    	//Create a JSONObject command and send it to server
         JSONObject command = new JSONObject();
-        
-        //create a test resource
-        JSONObject resource = new JSONObject();
-        
-        if(!initCmd.hasOption("uri")){
-        	return;
-        }
-        else{
-        	String uri = initCmd.getOptionValue("uri");
-        	resource.put("uri", uri);
-        }
-        
-        String[] tags = {"tag1", "tag2"};
-        resource.put("name", "");            
-        resource.put("tags", "");
-        resource.put("description", "");
-
-        resource.put("channel", "");
-        resource.put("owner", "");
-        resource.put("ezserver", null);
-        //create a test publish command
+        JSONObject resource = createResJSONObj(initCmd);
+        if(resource == null) return;
         command.put("command", "REMOVE");
         command.put("resource", resource.toJSONString());
-        
         generalReply(command.toJSONString());
     }
     
     @SuppressWarnings("unchecked")
-    //JSONObject extends HashMap but does not have type parameters as HashMap would expect...
     public static void FetchCmd(CommandLine initCmd) {
-        //parse args or use default value
-        String command = "FETCH";
-        
-        String name = initCmd.hasOption("name") ? initCmd.getOptionValue("name") : "";
-        //String tags = initCmd.hasOption("tags") ? initCmd.getOptionValue("tags") : "";
-        String description = initCmd.hasOption("description") ? initCmd.getOptionValue("description") : "";
-        String channel = initCmd.hasOption("channel") ? initCmd.getOptionValue("channel") : "";
-        String owner = initCmd.hasOption("owner") ? initCmd.getOptionValue("owner") : "";
-        String ezserver = initCmd.hasOption("ezserver") ? initCmd.getOptionValue("ezserver") : "";
-        
-        //Check whether the URI exists
-        if(!initCmd.hasOption("uri")) {
-        	System.out.println("Please provide the URI");
-        }
-        String uri = initCmd.getOptionValue("uri");
-        
-    	//Create a JSONObject command and send it to server
-        JSONObject commandObj = new JSONObject();
-        JSONObject resourceTemplate = new JSONObject();
-        
-        resourceTemplate.put("name", name);            
-        //resourceTemplate.put("tags", tags.toString());
-        resourceTemplate.put("description", description);
-        resourceTemplate.put("uri", uri);
-        resourceTemplate.put("channel", channel);
-        resourceTemplate.put("owner", owner);
-        resourceTemplate.put("ezserver", ezserver);
-        
-        commandObj.put("command", command);
-        commandObj.put("resourceTemplate", resourceTemplate.toJSONString());
+    	JSONObject command = new JSONObject();
+    	JSONObject resourceTemplate = createResJSONObj(initCmd);
+        if(resourceTemplate == null) return;
+        command.put("command", "FETCH");
+        command.put("resourceTemplate", resourceTemplate.toJSONString());
         
         try (Socket socket = new Socket(ip, port)){
             //Get I/O streams for connection
@@ -348,7 +251,7 @@ class Client {
             long start = System.currentTimeMillis();
             
             //send request
-            output.writeUTF(commandObj.toJSONString());
+            output.writeUTF(command.toJSONString());
             System.out.println("request sent");
             output.flush();
             
@@ -404,11 +307,9 @@ class Client {
             		}
             	}
             }
-            
         } catch (Exception e) {
             e.printStackTrace();
         }
-        
     }
     
     public static int setChunkSize(long fileSizeRemaining) {

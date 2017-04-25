@@ -14,11 +14,8 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
@@ -54,17 +51,6 @@ public class Server extends TimerTask {
         argOptions.put("debug", false);
     }
     
-    private static final Map<String, Boolean> argOptions;
-    static{
-        argOptions = new HashMap<>();
-        argOptions.put("advertisedhostname", true);
-        argOptions.put("connectionintervallimit", true);
-        argOptions.put("exchangeinterval", true);
-        argOptions.put("port", true);
-        argOptions.put("secret", true);
-        argOptions.put("debug", false);
-    }
-    
     public static void main(String[] args) {
         System.out.println("Server has started.");
         
@@ -87,10 +73,9 @@ public class Server extends TimerTask {
             port = Integer.parseInt(cmd.getOptionValue("port"));
             serverSecret = cmd.getOptionValue("secret");
         } else {
-            System.out.println("Please provide PORT option.");
+            System.out.println("Please provide enough options.");
             System.exit(0);
         }
-        //-----------
         
         //factory for server sockets
         ServerSocketFactory factory = ServerSocketFactory.getDefault();
@@ -102,7 +87,7 @@ public class Server extends TimerTask {
             //Set exchange schema
             TimerTask timerTask = new Server();
     		Timer timer = new Timer(true);
-    		timer.scheduleAtFixedRate(timerTask, 1, 600*1000);
+    		timer.scheduleAtFixedRate(timerTask, 1, 10*60*1000);
             
             //Keep listening for connections and use a thread pool with 2 threads
             ExecutorService executor = Executors.newFixedThreadPool(MAX_THREADS);
@@ -132,7 +117,7 @@ public class Server extends TimerTask {
         }
     }
 
-    //Send EXCHANGE command every 10 mins
+    //Send EXCHANGE command every 10 minutes
 	@SuppressWarnings("unchecked")
 	@Override
 	public void run() {
@@ -143,13 +128,21 @@ public class Server extends TimerTask {
 			try(Socket soc = new Socket(ip, port)){
 				DataInputStream input = new DataInputStream(soc.getInputStream());
 	            DataOutputStream output = new DataOutputStream(soc.getOutputStream());
-	            
+	            long startTime = System.currentTimeMillis();
 	            JSONObject command = new JSONObject();
 	            command.put("command", "EXCHANGE");
 	            command.put("serverList", serverList.getServerList());
 	            output.writeUTF(command.toJSONString());
 	            output.flush();
-	            //TODO does the server need to deal with this reply?
+	            
+	            while(true) {
+	            	if(input.available() > 0) {
+	            		System.out.println(input.readUTF());
+	            	}
+	            	if ((System.currentTimeMillis() - startTime) > 5*1000){
+	            		break;
+	            	}
+	            }
 			} catch (IOException e) {
 				serverList.remove(receiver);
 				e.printStackTrace();
@@ -157,7 +150,8 @@ public class Server extends TimerTask {
 		}		
 	}
 	
-	@SuppressWarnings("rawtypes")
+	/*
+	 * don't use this method or we have to make the clientIPList synchronized
 	private void updateClientIPList() {
 		Iterator<Entry<String, Long>> it = clientIPList.entrySet().iterator();
 	    while (it.hasNext()) {
@@ -168,5 +162,5 @@ public class Server extends TimerTask {
 	        it.remove(); // avoids a ConcurrentModificationException
 	    }
 	}
-	
+	*/
 }
