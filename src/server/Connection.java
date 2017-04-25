@@ -148,7 +148,7 @@ public class Connection implements Runnable {
                 ResourceList results = new ResourceList();
                 if (client_request.containsKey("relay")) {
                     if ((Boolean)client_request.get("relay")) {
-//                        results = propagateQuery(client_request, in_res);
+                        results = propagateQuery(client_request, in_res);
                         result_cnt += results.getSize();
                     }
                 }
@@ -242,7 +242,7 @@ public class Connection implements Runnable {
         command.put("relay", false);
             res.put("owner", "");
             res.put("channel", "");
-        command.put("resourceTemplate", res.toJSONString());
+        command.put("resourceTemplate", res);
 
         //TODO implement this as threads, instead of sequential
         //for each server from server list
@@ -252,7 +252,7 @@ public class Connection implements Runnable {
             //Get server details
             JSONObject server = (JSONObject)serv_list.get(i);
             String hostname = (String)server.get("hostname");
-            int port = (int) server.get("port");            
+            int port = Integer.parseInt((String)server.get("port"));            
             
             //Send QUERY command to that server
             Socket socket = new Socket(hostname, port);
