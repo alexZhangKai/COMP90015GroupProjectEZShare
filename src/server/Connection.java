@@ -15,7 +15,6 @@ import java.io.*;
 import java.net.*;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
 
 import org.json.simple.JSONArray;
@@ -121,7 +120,7 @@ public class Connection implements Runnable {
 
     @SuppressWarnings("unchecked")
     private void query(JSONObject client_request, DataOutputStream output) throws IOException {                
-/*
+
     	if (client_request.containsKey("resourceTemplate")) {
             try {
                 Resource in_res;
@@ -151,7 +150,7 @@ public class Connection implements Runnable {
                     if (in_res.getChannel().equals(curr_res.getChannel()) && 
                             in_res.getOwner().equals(curr_res.getOwner()) &&
                             compareTags(in_res.getTags(), curr_res.getTags()) &&
-                            in_res.getUri().equals(curr_res.getUri()) &&
+                            compareUri(in_res.getUri(), curr_res.getUri()) &&
                                 (curr_res.getName().contains(in_res.getName()) ||
                                 curr_res.getDescription().contains(in_res.getDescription()))) {
                         
@@ -161,7 +160,7 @@ public class Connection implements Runnable {
                                 curr_res.getOwner().equals("")? "":"*", curr_res.getEZserver());  //owner is never revealed
 
                         //Send found resource as JSON to client
-                        //results.addResource(tempRes);
+                        results.addResource(tempRes);
                         result_cnt++;
                     }
                 }
@@ -188,8 +187,17 @@ public class Connection implements Runnable {
             error.put("response", "error");
             error.put("errorMessage", "missing resourceTemplate");
             output.writeUTF(error.toJSONString());
-        }  
-        */      
+        }      
+    }
+
+    //Compare the two URIs for Query purposes. If the incoming URI has no host i.e. is empty, it should match all URIs
+    //...otherwise only an exact match is acceptable
+    private boolean compareUri(URI in_uri, URI curr_uri) {
+        if (in_uri.getHost() == null) {
+            return true;
+        } else {
+            return in_uri.equals(curr_uri);
+        }
     }
 
     private boolean compareTags(List<String> in_res, List<String> curr_res) {
@@ -229,7 +237,7 @@ public class Connection implements Runnable {
 			//throw server exception invalid resource
 			Resource resource = JSONObj2Resource(resourceJSON);
 			
-			URI uri = resource.getURI();
+			URI uri = resource.getUri();
 			//check if URI is provided
 			if(uri.toString().equals("")) throw new serverException("invalid resource");
 			
@@ -280,7 +288,7 @@ public class Connection implements Runnable {
 			//throw server exception invalid resource
 			Resource resource = JSONObj2Resource(resourceJSON);
 			
-			URI uri = resource.getURI();
+			URI uri = resource.getUri();
 			//check if URI is provided
 			if(uri.toString().equals("")) throw new serverException("invalid resource");
 			

@@ -94,6 +94,10 @@ class Client {
             Client.FetchCmd(initCmd);
         } else if (initCmd.hasOption("exchange")) {
             Client.ExchangeCmd(initCmd);
+        } else if (initCmd.hasOption("invalidComm")) {
+            Client.InvalidCmd();
+        } else if (initCmd.hasOption("missingComm")) {
+            Client.MissingCmd();
         } else {
             System.out.println("Please use valid arguments.");
         }
@@ -105,14 +109,14 @@ class Client {
         jobj.put("uwotm8", "blah");
         Client.generalReply(jobj.toString());
     }
-
-        Client.generalReply(jobj.toString());
         
     @SuppressWarnings("unchecked")
     private static void InvalidCmd() {
         JSONObject jobj = new JSONObject();
         jobj.put("command", "blah");
-        Client.generalReply(jobj.toString());
+        Client.generalReply(jobj.toString());   
+    }
+    
     @SuppressWarnings("unchecked")
 	private static void ExchangeCmd(CommandLine initCmd) {
     	JSONObject command = new JSONObject();
@@ -130,6 +134,7 @@ class Client {
     	command.put("serverList", servers.toJSONString());
     	generalReply(command.toJSONString());
     }
+    
     @SuppressWarnings("unchecked")
     public static void ShareCmd(CommandLine initCmd) {
     	//Create a JSONObject command and send it to server
@@ -147,45 +152,17 @@ class Client {
     @SuppressWarnings("unchecked")
     private static void QueryCmd(CommandLine initCmd) {
         JSONObject command = new JSONObject();
+        
+        //TODO Likely cannot use this method to construct the template as it may NOT have a URI
         JSONObject resourceTemplate = createResJSONObj(initCmd);
+        
+        //TODO remove these returns in favour of proper error handling.
         if(resourceTemplate == null) return;
+        
         command.put("command", "QUERY");
         command.put("relay", true);
         command.put("resourceTemplate", resourceTemplate.toJSONString());
         generalReply(command.toJSONString());
-        
-/*        JSONObject req = new JSONObject();
-        JSONObject resource = new JSONObject();
-        JSONArray tag_list = new JSONArray();
-        
-        req.put("command", "QUERY");
-        req.put("relay", true);
-        
-        //Sub-JSON Object [resourceTemplate]
-        //Get tags from cmd argument and convert to list
-        resource.put("name", initCmd.hasOption("name")? initCmd.getOptionValue("name") : "");
-        if (initCmd.hasOption("tags")) {
-            String[] tags_arr = initCmd.getOptionValue("tags").split(",");
-            tag_list = new JSONArray();
-            for (String tag: tags_arr){
-                tag_list.add(tag);
-            }
-            //tags = tag_list.toJSONString();
-        }
-        resource.put("tags", tag_list);
-        resource.put("description", initCmd.hasOption("description")? initCmd.getOptionValue("description"):"");
-        resource.put("uri", initCmd.hasOption("uri")? initCmd.getOptionValue("uri"):"");
-        resource.put("channel", initCmd.hasOption("uri")? initCmd.getOptionValue("uri"):"");
-        resource.put("owner", initCmd.hasOption("owner")? initCmd.getOptionValue("owner"):"");
-        resource.put("ezserver", null);
-        
-        //Finalise original, outer, JSON object
-        req.put("resourceTemplate", resource.toJSONString());
-        System.out.println(req.toJSONString());
-        
-        //Send it off to the server
-        Client.generalReply(req.toJSONString());
-    */
     }
 
     public static void generalReply(String request) {
@@ -232,11 +209,12 @@ class Client {
     private static JSONObject createResJSONObj(CommandLine initCmd) {
     	JSONObject resource = new JSONObject();
     	
-        if(!initCmd.hasOption("uri")) {
-        	System.out.println("Provide URI for publish.");
-        	return null;
-        }
-       	String uri = initCmd.getOptionValue("uri");
+    	//TODO There will not ALWAYS be a URI e.g. in the case of Query
+//        if(!initCmd.hasOption("uri")) {
+//        	System.out.println("Provide URI for publish.");
+//        	return null;
+//        }
+       	String uri = initCmd.hasOption("uri")? initCmd.getOptionValue("uri") : "";
         String name = initCmd.hasOption("name") ? initCmd.getOptionValue("name") : "";
         
         JSONArray tag_list = new JSONArray();

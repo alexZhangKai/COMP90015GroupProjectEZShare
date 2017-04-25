@@ -9,6 +9,7 @@
 
 package server;
 
+import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -126,7 +127,7 @@ public class Server extends TimerTask {
 			String ip = (String) receiver.get("hostname");
 			int port = (int) receiver.get("port");
 			try(Socket soc = new Socket(ip, port)){
-//				DataInputStream input = new DataInputStream(soc.getInputStream());
+				DataInputStream input = new DataInputStream(soc.getInputStream());
 	            DataOutputStream output = new DataOutputStream(soc.getOutputStream());
 	            long startTime = System.currentTimeMillis();
 	            JSONObject command = new JSONObject();
