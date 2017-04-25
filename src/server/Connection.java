@@ -25,7 +25,7 @@ import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
 public class Connection implements Runnable {
-	private static final int NUM_SEC = 1;
+	private static final int NUM_SEC = 2;
     private int id;
 	private Socket client;
 	private ResourceList resourceList;
@@ -147,8 +147,9 @@ public class Connection implements Runnable {
                 //get results from other servers first if relay == true
                 ResourceList results = new ResourceList();
                 if (client_request.containsKey("relay")) {
-                    if ((Boolean)client_request.get("relay")) {
-                        results = propagateQuery(client_request, in_res);
+                    //only propagate when there are other servers in the list
+                    if ((Boolean)client_request.get("relay") && serverList.getLength() > 0) {
+                        results = propagateQuery(client_request);
                         result_cnt += results.getSize();
                     }
                 }
@@ -228,8 +229,8 @@ public class Connection implements Runnable {
         return true;
     }
 
-    @SuppressWarnings({ "unused", "unchecked" })
-    private ResourceList propagateQuery(JSONObject client_request, Resource in_res) throws ParseException, UnknownHostException, IOException, serverException {
+    @SuppressWarnings("unchecked")
+    private ResourceList propagateQuery(JSONObject client_request) throws ParseException, UnknownHostException, IOException, serverException {
         ResourceList prop_results = new ResourceList();
         
         //construct the right query
@@ -251,8 +252,8 @@ public class Connection implements Runnable {
 
             //Get server details
             JSONObject server = (JSONObject)serv_list.get(i);
-            String hostname = (String)server.get("hostname");
-            int port = Integer.parseInt((String)server.get("port"));            
+            String hostname = (String) server.get("hostname");
+            int port = Integer.parseInt((String) server.get("port"));            
             
             //Send QUERY command to that server
             Socket socket = new Socket(hostname, port);
