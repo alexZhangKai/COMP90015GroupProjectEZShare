@@ -105,7 +105,7 @@ public class Connection implements Runnable {
 		JSONArray newServerList = new JSONArray();
 		try{
 			JSONParser parser = new JSONParser();
-			newServerList = (JSONArray) parser.parse((String) client_request.get("serverList"));
+			newServerList = (JSONArray) parser.parse(client_request.get("serverList").toString());
 		} catch (ClassCastException | ParseException e) {
 			JSONObject reply = new JSONObject();
 			reply.put("response", "error");
@@ -135,7 +135,7 @@ public class Connection implements Runnable {
                 JSONParser parser = new JSONParser();
                 
                 // The following should throw an invalid resource exception
-                in_res = this.JSONObj2Resource((JSONObject) parser.parse((String)client_request.get("resourceTemplate")));
+                in_res = this.JSONObj2Resource((JSONObject) parser.parse(client_request.get("resourceTemplate").toString()));
                 
                 // If there was a resourceTemplate AND the template checked out as a valid Resource, report success
                 JSONObject response = new JSONObject();
@@ -234,7 +234,7 @@ public class Connection implements Runnable {
         
         //construct the right query
         JSONParser parser = new JSONParser();
-        JSONObject res = (JSONObject) parser.parse((String)client_request.get("resourceTemplate"));
+        JSONObject res = (JSONObject) parser.parse(client_request.get("resourceTemplate").toString());
         JSONObject command = new JSONObject();
         
         //remove owner and channel and set to "" + relay = false
@@ -273,7 +273,7 @@ public class Connection implements Runnable {
             while(true) {
                 if(input.available() > 0) {
                     //get results and store in results list
-                    JSONObject temp_response = (JSONObject) parser.parse((String) input.readUTF());
+                    JSONObject temp_response = (JSONObject) parser.parse(input.readUTF());
                     if (temp_response.containsKey("uri")) {
                         Resource temp_res = this.JSONObj2Resource(temp_response);
                         prop_results.addResource(temp_res);
@@ -293,7 +293,7 @@ public class Connection implements Runnable {
     	JSONParser parser = new JSONParser();
 		try{
 			//throw class cast exception for missing resource and\/or secret
-			JSONObject resourceJSON = (JSONObject) parser.parse((String) client_req.get("resource"));
+			JSONObject resourceJSON = (JSONObject) parser.parse(client_req.get("resource").toString());
 			if(!client_req.containsKey("secret")) throw new ClassCastException();
 			
 			//throw server exception invalid resource
@@ -344,7 +344,7 @@ public class Connection implements Runnable {
     	JSONParser parser = new JSONParser();
 		try{
 			//throw class cast exception for missing resource
-			JSONObject resourceJSON = (JSONObject) parser.parse((String) client_req.get("resource"));
+			JSONObject resourceJSON = (JSONObject) parser.parse(client_req.get("resource").toString());
 			
 			//throw server exception invalid resource
 			Resource resource = JSONObj2Resource(resourceJSON);
@@ -383,7 +383,7 @@ public class Connection implements Runnable {
 		JSONParser parser = new JSONParser();
 		try{
 			//throw class cast exception for missing resource
-			JSONObject resourceJSON = (JSONObject) parser.parse((String) client_req.get("resource"));
+			JSONObject resourceJSON = (JSONObject) parser.parse(client_req.get("resource").toString());
 			
 			//throw server exception invalid resource
 			Resource resource = JSONObj2Resource(resourceJSON);
@@ -413,7 +413,7 @@ public class Connection implements Runnable {
 		JSONParser parser = new JSONParser();
 		try{
 			//throw class cast exception for missing resource
-			JSONObject resourceJSON = (JSONObject) parser.parse((String) client_req.get("resourceTemplate"));
+			JSONObject resourceJSON = (JSONObject) parser.parse(client_req.get("resourceTemplate").toString());
 			
 			//throw server exception invalid resource
 			Resource resourceTemplate = JSONObj2Resource(resourceJSON);
