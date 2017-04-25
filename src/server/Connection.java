@@ -304,8 +304,8 @@ public class Connection implements Runnable {
 			if(uri.toString().equals("")) throw new serverException("invalid resource");
 			
 			//check if URI is a file scheme
-			boolean isFile = "file".equalsIgnoreCase(uri.getScheme());
-			if(isFile) throw new serverException("invalid resource");
+//			boolean isFile = "file".equalsIgnoreCase(uri.getScheme());
+//			if(!isFile) throw new serverException("invalid resource");
 			
 			//check if the file exist
 			//TODO uncomment when submit
@@ -413,7 +413,7 @@ public class Connection implements Runnable {
 		JSONParser parser = new JSONParser();
 		try{
 			//throw class cast exception for missing resource
-			JSONObject resourceJSON = (JSONObject) parser.parse((String) client_req.get("resource"));
+			JSONObject resourceJSON = (JSONObject) parser.parse((String) client_req.get("resourceTemplate"));
 			
 			//throw server exception invalid resource
 			Resource resourceTemplate = JSONObj2Resource(resourceJSON);
@@ -431,7 +431,7 @@ public class Connection implements Runnable {
 		
 			//Use a known URI, need to check the file afterward ? 
 			URI uri = match.getUri();
-			File f = new File(uri.toString());
+			File f = new File(uri.getHost() + uri.getPath());
 			if(f.exists()) {
 				JSONObject reponse = new JSONObject();
 				reponse.put("response", "success");
@@ -468,6 +468,8 @@ public class Connection implements Runnable {
 				reply.put("errorMessage", e.toString());
 			}
 			output.writeUTF(reply.toJSONString());
+		} catch (Exception e){
+		    e.printStackTrace();
 		}
 	}
 	
@@ -476,11 +478,11 @@ public class Connection implements Runnable {
 	private Resource JSONObj2Resource(JSONObject resource) throws serverException {
 		//handle default value here
 		String Name = resource.containsKey("name") ? (String) resource.get("name") : "";
-		if (Name.contains("\0")) {
+		if (Name.contains("\\0")) {
 			throw new serverException("Invalid resource");
 		}
 		String Description = resource.containsKey("description") ? (String) resource.get("description") : "";
-		if (Description.contains("\0")) {
+		if (Description.contains("\\0")) {
 			throw new serverException("Invalid resource");
 		}
 		
@@ -497,7 +499,7 @@ public class Connection implements Runnable {
 		
 		//TODO When to check if URI is unique or not for a given channel?
 		String uri_s = resource.containsKey("uri") ? (String) resource.get("uri") : "";
-		if (uri_s.contains("\0")) {
+		if (uri_s.contains("\\0")) {
 			throw new serverException("Invalid resource");
 		}
 		URI uri;
@@ -509,12 +511,12 @@ public class Connection implements Runnable {
 		}
 		
 		String Channel = resource.containsKey("channel") ? (String) resource.get("channel") : "";
-		if (Channel.contains("\0")) {
+		if (Channel.contains("\\0")) {
 			throw new serverException("Invalid resource");
 		}
 		
 		String Owner = resource.containsKey("owner") ? (String) resource.get("owner") : "";
-		if (Owner.contains("\0") || Owner.contains("*")) {
+		if (Owner.contains("\\0") || Owner.contains("*")) {
 			throw new serverException("Invalid resource");
 		}
 		String EZserver = hostname+":"+port;
@@ -536,7 +538,7 @@ public class Connection implements Runnable {
         //TODO should value for "tags" be a string or is a JSONArray okay?
         jobj.put("tags", tag_list);
         
-        jobj.put("uri", resource.getUri());
+        jobj.put("uri", resource.getUri().toString());
         jobj.put("channel", resource.getChannel());
         jobj.put("owner", resource.getOwner());
         jobj.put("ezserver", resource.getEZserver());
