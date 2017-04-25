@@ -147,12 +147,13 @@ public class Connection implements Runnable {
                 //get results from other servers first if relay == true
                 ResourceList results = new ResourceList();
                 if (client_request.containsKey("relay")) {
-                    if ((Boolean)client_request.get("relay")) {
+                	//do propagate when there is a server in the server list
+                    if ((Boolean)client_request.get("relay") && serverList.getLength() > 0) {
                         results = propagateQuery(client_request, in_res);
                         result_cnt += results.getSize();
                     }
                 }
-                
+                //TODO something wrong with the conditions, there is no channel value in relay, cannot match
                 //Query current resource list for resources that match the template
                 for (Resource curr_res: resourceList.getResList()){
                     if (in_res.getChannel().equals(curr_res.getChannel()) && 
@@ -229,6 +230,7 @@ public class Connection implements Runnable {
     }
 
     @SuppressWarnings({ "unused", "unchecked" })
+    //TODO I dont find you use in_res in this method
     private ResourceList propagateQuery(JSONObject client_request, Resource in_res) throws ParseException, UnknownHostException, IOException, serverException {
         ResourceList prop_results = new ResourceList();
         
@@ -252,7 +254,7 @@ public class Connection implements Runnable {
             //Get server details
             JSONObject server = (JSONObject)serv_list.get(i);
             String hostname = (String)server.get("hostname");
-            int port = Integer.parseInt((String)server.get("port"));            
+            int port = Integer.parseInt((String) server.get("port"));            
             
             //Send QUERY command to that server
             Socket socket = new Socket(hostname, port);
@@ -279,6 +281,7 @@ public class Connection implements Runnable {
                         prop_results.addResource(temp_res);
                     }
                 }
+                //TODO set it large when debug like 100 times more
                 if ((System.currentTimeMillis() - startTime) > NUM_SEC*1000){
                     break;
                 }

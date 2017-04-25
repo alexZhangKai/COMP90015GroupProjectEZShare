@@ -127,7 +127,7 @@ class Client {
     	for(String server : serversArr) {
     		String[] hostAndPort = server.split(":");
     		JSONObject ele = new JSONObject();
-    		ele.put("host", hostAndPort[0]);
+    		ele.put("hostname", hostAndPort[0]);
     		ele.put("port", hostAndPort[1]);
     		servers.add(ele);
     	}

@@ -91,9 +91,10 @@ public class Server extends TimerTask {
             System.out.println("Waiting for client connection...");
              
             //Set exchange schema
+            //TODO comment exchange for test
             TimerTask timerTask = new Server();
     		Timer timer = new Timer(true);
-    		timer.scheduleAtFixedRate(timerTask, 1, 10*60*1000);
+    		//timer.scheduleAtFixedRate(timerTask, 1, 10*60*1000);
             
             //Keep listening for connections and use a thread pool with 2 threads
             ExecutorService executor = Executors.newFixedThreadPool(MAX_THREADS);
