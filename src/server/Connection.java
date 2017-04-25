@@ -15,6 +15,7 @@ import java.io.*;
 import java.net.*;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 
 import org.json.simple.JSONArray;
@@ -148,7 +149,7 @@ public class Connection implements Runnable {
                 for (Resource curr_res: resourceList.getResList()){
                     if (in_res.getChannel().equals(curr_res.getChannel()) && 
                             in_res.getOwner().equals(curr_res.getOwner()) &&
-//                            in_res.getTags().equals(curr_res.getTags()) &&
+                            compareTags(in_res.getTags(), curr_res.getTags()) &&
                             in_res.getUri().equals(curr_res.getUri()) &&
                                 (curr_res.getName().contains(in_res.getName()) ||
                                 curr_res.getDescription().contains(in_res.getDescription()))) {
@@ -187,6 +188,26 @@ public class Connection implements Runnable {
             error.put("errorMessage", "missing resourceTemplate");
             output.writeUTF(error.toJSONString());
         }        
+    }
+
+    private boolean compareTags(List<String> in_res, List<String> curr_res) {
+        if (in_res.size() == 0 && curr_res.size() == 0) {
+            return true;
+        }
+        else if (in_res.size() == 0 && curr_res.size() != 0){
+            return false;
+        }
+        else if (in_res.size() != 0 && curr_res.size() == 0){
+            return false;
+        }
+        else {
+            for (String tag: in_res){
+                if (!curr_res.contains(tag)) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     @SuppressWarnings("unused")
