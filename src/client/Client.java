@@ -103,12 +103,14 @@ class Client {
         }
     }
      
+    @SuppressWarnings("unchecked")
     private static void MissingCmd() {
         JSONObject jobj = new JSONObject();
         jobj.put("uwotm8", "blah");
         Client.generalReply(jobj.toString());
     }
 
+    @SuppressWarnings("unchecked")
     private static void InvalidCmd() {
         JSONObject jobj = new JSONObject();
         jobj.put("command", "blah");
@@ -143,7 +145,8 @@ class Client {
         String channel = initCmd.hasOption("channel") ? initCmd.getOptionValue("channel") : "";
         String owner = initCmd.hasOption("owner") ? initCmd.getOptionValue("owner") : "";
         
-        String[] tags = {"tag1", "tag2"};
+        //TODO Put tags in client Share command
+        //String[] tags = {"tag1", "tag2"};
         resource.put("name", name);            
        /* resource.put("tags", tags.toString());*/
         resource.put("description", description);
@@ -153,14 +156,17 @@ class Client {
         resource.put("ezserver", null);
         //create a test publish command
         command.put("command", "SHARE");
+        command.put("secret", secret);
         command.put("resource", resource.toJSONString());
         
         generalReply(command.toJSONString());
+    }
 
+    @SuppressWarnings("unchecked")
     private static void QueryCmd(CommandLine initCmd) {
         JSONObject req = new JSONObject();
         JSONObject resource = new JSONObject();
-        String tags = "";
+        JSONArray tag_list = new JSONArray();
         
         req.put("command", "QUERY");
         req.put("relay", true);
@@ -170,13 +176,13 @@ class Client {
         resource.put("name", initCmd.hasOption("name")? initCmd.getOptionValue("name") : "");
         if (initCmd.hasOption("tags")) {
             String[] tags_arr = initCmd.getOptionValue("tags").split(",");
-            JSONArray tag_list = new JSONArray();
+            tag_list = new JSONArray();
             for (String tag: tags_arr){
                 tag_list.add(tag);
             }
-            tags = tag_list.toJSONString();
+            //tags = tag_list.toJSONString();
         }
-        resource.put("tags", tags);
+        resource.put("tags", tag_list);
         resource.put("description", initCmd.hasOption("description")? initCmd.getOptionValue("description"):"");
         resource.put("uri", initCmd.hasOption("uri")? initCmd.getOptionValue("uri"):"");
         resource.put("channel", initCmd.hasOption("uri")? initCmd.getOptionValue("uri"):"");
@@ -243,26 +249,36 @@ class Client {
         //create a test resource
         JSONObject resource = new JSONObject();
 
+        String uri = "";
         if(!initCmd.hasOption("uri")){
-        	return;
+            //TODO What is this? No exception throwing, no message, no nothing! Really bad code. - Abhi
+//        	return;
         }
         else{
-        	String uri = initCmd.getOptionValue("uri");
-        	resource.put("uri", uri);
+        	uri = initCmd.getOptionValue("uri");
         }
         String name = initCmd.hasOption("name") ? initCmd.getOptionValue("name") : "";
+        
+        JSONArray tag_list = new JSONArray();
+        if (initCmd.hasOption("tags")) {
+            String[] tags_arr = initCmd.getOptionValue("tags").split(",");
+            tag_list = new JSONArray();
+            for (String tag: tags_arr){
+                tag_list.add(tag);
+            }
+            //tags = tag_list.toJSONString();
+        }
+        
         String description = initCmd.hasOption("description") ? initCmd.getOptionValue("description") : "";
-
         String channel = initCmd.hasOption("channel") ? initCmd.getOptionValue("channel") : "";
         String owner = initCmd.hasOption("owner") ? initCmd.getOptionValue("owner") : "";
-        
-        String[] tags = {"tag1", "tag2"};// confused about it
-        
+                
         resource.put("name", name);            
-        resource.put("tags", tags.toString());
+        resource.put("tags", tag_list);
         resource.put("description", description);
+        resource.put("uri", uri);
         resource.put("channel", channel);
-        resource.put("owner",owner );
+        resource.put("owner", owner);
         resource.put("ezserver", null);
 
         command.put("command", "PUBLISH");
@@ -290,7 +306,6 @@ class Client {
         	resource.put("uri", uri);
         }
         
-        String[] tags = {"tag1", "tag2"};
         resource.put("name", "");            
         resource.put("tags", "");
         resource.put("description", "");

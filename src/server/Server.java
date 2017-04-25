@@ -9,12 +9,10 @@
 
 package server;
 
-import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -42,17 +40,6 @@ public class Server extends TimerTask {
     private static String serverSecret;
     private static HashMap<String, Long> clientIPList = new HashMap<String, Long>();
     private static long intervalLimit = 1*1000;
-    
-    private static final Map<String, Boolean> argOptions;
-    static{
-        argOptions = new HashMap<>();
-        argOptions.put("advertisedhostname", true);
-        argOptions.put("connectionintervallimit", true);
-        argOptions.put("exchangeinterval", true);
-        argOptions.put("port", true);
-        argOptions.put("secret", true);
-        argOptions.put("debug", false);
-    }
     
     private static final Map<String, Boolean> argOptions;
     static{
@@ -99,6 +86,7 @@ public class Server extends TimerTask {
         try (ServerSocket server = factory.createServerSocket(port)){
             System.out.println("Waiting for client connection...");
             
+            //TODO exchange process was causing issues in testing, disabled for now. 
             //Set exchange schema
             TimerTask timerTask = new Server();
     		Timer timer = new Timer(true);
@@ -141,7 +129,7 @@ public class Server extends TimerTask {
 			String ip = (String) receiver.get("hostname");
 			int port = (int) receiver.get("port");
 			try(Socket soc = new Socket(ip, port)){
-				DataInputStream input = new DataInputStream(soc.getInputStream());
+//				DataInputStream input = new DataInputStream(soc.getInputStream());
 	            DataOutputStream output = new DataOutputStream(soc.getOutputStream());
 	            
 	            JSONObject command = new JSONObject();
@@ -157,8 +145,9 @@ public class Server extends TimerTask {
 		}		
 	}
 	
-	@SuppressWarnings("rawtypes")
+	@SuppressWarnings({ "rawtypes", "unused" })
 	private void updateClientIPList() {
+	    //TODO Update client IP list method not used - needs to be implemented?
 		Iterator<Entry<String, Long>> it = clientIPList.entrySet().iterator();
 	    while (it.hasNext()) {
 	        Map.Entry pair = (Map.Entry)it.next();

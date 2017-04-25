@@ -13,7 +13,9 @@ package server;
 
 import java.io.*;
 import java.net.*;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import org.json.simple.JSONArray;
 
@@ -147,13 +149,13 @@ public class Connection implements Runnable {
                     if (in_res.getChannel().equals(curr_res.getChannel()) && 
                             in_res.getOwner().equals(curr_res.getOwner()) &&
 //                            in_res.getTags().equals(curr_res.getTags()) &&
-                            in_res.getURI().equals(curr_res.getURI()) &&
+                            in_res.getUri().equals(curr_res.getUri()) &&
                                 (curr_res.getName().contains(in_res.getName()) ||
                                 curr_res.getDescription().contains(in_res.getDescription()))) {
                         
                         //Copy current resource into results list if it matches criterion
-                        Resource tempRes = new Resource(curr_res.getName(), curr_res.getDescription(), curr_res.getTags().clone(), 
-                                curr_res.getURI(), curr_res.getChannel(), 
+                        Resource tempRes = new Resource(curr_res.getName(), curr_res.getDescription(), curr_res.getTags(), 
+                                curr_res.getUri(), curr_res.getChannel(), 
                                 curr_res.getOwner().equals("")? "":"*", curr_res.getEZserver());  //owner is never revealed
 
                         //Send found resource as JSON to client
@@ -187,6 +189,7 @@ public class Connection implements Runnable {
         }        
     }
 
+    @SuppressWarnings("unused")
     private ResourceList propagateQuery(JSONObject client_request) {
         // TODO Propagate query if relay is true
         return null;
@@ -293,8 +296,8 @@ public class Connection implements Runnable {
 			}
 		
 			//Use a known URI, need to check the file afterward ? 
-			String URI = match.getURI();
-			File f = new File(URI);
+			URI uri = match.getUri();
+			File f = new File(uri);
 			if(f.exists()) {
 				JSONObject reponse = new JSONObject();
 				reponse.put("response", "success");
@@ -331,6 +334,7 @@ public class Connection implements Runnable {
 	}
 	
 	//TODO this needs to throw an error if JSON is NOT a proper resource i.e. does not contain the required fields
+	//TODO Also check for null values when key exists!
 	private Resource JSONObj2Resource(JSONObject resource) throws serverException {
 		//handle default value here
 		String Name = resource.containsKey("name") ? (String) resource.get("name") : "";
@@ -343,19 +347,24 @@ public class Connection implements Runnable {
 		}
 		
 		//TODO String[] Tags is different deal with it later - unsure about check
-		JSONArray[] Tags = new JSONArray[0];
-		if (Tags.length == 0) {
-			throw new serverException("Invalid resource");
+		JSONArray tags_jarr = resource.containsKey("tags")? (JSONArray) resource.get("tags") : null;
+		List<String> tags_slist = new ArrayList<String>();
+		
+		if (tags_jarr.size() != 0) {
+		    for (Object tag: tags_jarr){
+		        tags_slist.add((String) tag);
+		    }
 		}
+		
 		
 		//TODO When to check if URI is unique or not for a given channel?
-		String URI = resource.containsKey("uri") ? (String) resource.get("uri") : "";
-		if (URI.contains("\0")) {
+		String uri_s = resource.containsKey("uri") ? (String) resource.get("uri") : "";
+		if (uri_s.contains("\0")) {
 			throw new serverException("Invalid resource");
 		}
-		
+		URI uri;
 		try {
-			URI uri = new URI(URI);
+			uri = new URI(uri_s);
 		}
 		catch (URISyntaxException e) {
 			throw new serverException("Invalid resrouce");
@@ -374,12 +383,15 @@ public class Connection implements Runnable {
 		
 		//TODO Store this server's server:port info - system supplied
 		String EZserver = resource.containsKey("ezserver") ? (String) resource.get("ezserver") : "";
+		if (EZserver == null) {
+            EZserver = "";
+        }
 		if (EZserver.contains("\0")) {
 			throw new serverException("Invalid resource");
 		}
 		
 		//TODO problem with Resource class causing error
-		return new Resource(Name, Description, Tags, URI, Channel, Owner, EZserver);
+		return new Resource(Name, Description, tags_slist, uri, Channel, Owner, EZserver);
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -397,7 +409,7 @@ public class Connection implements Runnable {
         //TODO should value for "tags" be a string or is a JSONArray okay?
         jobj.put("tags", tag_list);
         
-        jobj.put("uri", resource.getURI());
+        jobj.put("uri", resource.getUri());
         jobj.put("channel", resource.getChannel());
         jobj.put("owner", resource.getOwner());
         jobj.put("ezserver", resource.getEZserver());
