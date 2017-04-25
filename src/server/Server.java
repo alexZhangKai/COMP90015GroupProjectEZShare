@@ -38,6 +38,8 @@ public class Server extends TimerTask {
     private static ServerList serverList = new ServerList();
     private static HashMap<String, Long> clientIPList = new HashMap<String, Long>();
     private static long intervalLimit = 1*1000;
+    private static String hostname;
+    private static String secret;
     
     private static final Map<String, Boolean> argOptions;
     static{
@@ -51,7 +53,6 @@ public class Server extends TimerTask {
     }
     
     public static void main(String[] args) {
-        System.out.println("Server has started.");
         
         //Parse CMD options
         Options options = new Options();
@@ -68,12 +69,19 @@ public class Server extends TimerTask {
             e.printStackTrace();
         }
         
-        if (cmd.hasOption("port") && cmd.hasOption("secret")) {
+        if (cmd.hasOption("port") && cmd.hasOption("secret") && cmd.hasOption("advertisedhostname")) {
             port = Integer.parseInt(cmd.getOptionValue("port"));
+            Server.hostname = cmd.getOptionValue("advertisedhostname");
+            Server.secret = cmd.getOptionValue("secret");
         } else {
             System.out.println("Please provide enough options.");
             System.exit(0);
         }
+        
+       System.out.println("[INFO] - Starting the EZShare Server\n" + 
+                           "[INFO] - using secret: " + Server.secret + "\n" +
+                           "[INFO] - using advertised hostname: " + Server.hostname + "\n" + 
+                           "[INFO] - bound to port " + Server.port);
         
         //factory for server sockets
         ServerSocketFactory factory = ServerSocketFactory.getDefault();
@@ -119,10 +127,13 @@ public class Server extends TimerTask {
 	@SuppressWarnings("unchecked")
 	@Override
 	public void run() {
+	    
+	    System.out.println("\n[INFO] - started Exchanger\n");
+	    
 		if(serverList.getLength() > 0) {
 			JSONObject receiver = serverList.select();
 			String ip = (String) receiver.get("hostname");
-			int port = (int) receiver.get("port");
+			int port = Integer.parseInt((String)receiver.get("port"));
 			try(Socket soc = new Socket(ip, port)){
 				DataInputStream input = new DataInputStream(soc.getInputStream());
 	            DataOutputStream output = new DataOutputStream(soc.getOutputStream());

@@ -87,13 +87,13 @@ class Client {
             Client.PublishCmd(initCmd);
         } else if (initCmd.hasOption("remove")) {
             Client.RemoveCmd(initCmd);
-        } else if (initCmd.hasOption("share")) {
+        } else if (initCmd.hasOption("share") && initCmd.hasOption("secret")) {
             Client.ShareCmd(initCmd);
         } else if (initCmd.hasOption("query")) {
             Client.QueryCmd(initCmd);
         } else if (initCmd.hasOption("fetch")) {
             Client.FetchCmd(initCmd);
-        } else if (initCmd.hasOption("exchange")) {
+        } else if (initCmd.hasOption("exchange") && initCmd.hasOption("servers")) {
             Client.ExchangeCmd(initCmd);
         } else if (initCmd.hasOption("invalidComm")) {
             Client.InvalidCmd();
@@ -121,7 +121,7 @@ class Client {
     @SuppressWarnings("unchecked")
 	private static void ExchangeCmd(CommandLine initCmd) {
     	JSONObject command = new JSONObject();
-    	if(!initCmd.hasOption("servers")) return;
+
     	String[] serversArr = initCmd.getOptionValue("servers").split(",");
     	JSONArray servers = new JSONArray();
     	for(String server : serversArr) {
@@ -141,12 +141,11 @@ class Client {
     	//Create a JSONObject command and send it to server
         JSONObject command = new JSONObject();
         JSONObject resource = createResJSONObj(initCmd);
-        if(resource == null) return;
-        if(!initCmd.hasOption("secret")) return;
+
         String secret = initCmd.getOptionValue("secret");
         command.put("command", "SHARE");
         command.put("secret", secret);
-        command.put("resource", resource.toJSONString());
+        command.put("resource", resource);
         generalReply(command.toJSONString());
     }
     
@@ -157,12 +156,9 @@ class Client {
         //TODO Likely cannot use this method to construct the template as it may NOT have a URI
         JSONObject resourceTemplate = createResJSONObj(initCmd);
         
-        //TODO remove these returns in favour of proper error handling.
-        if(resourceTemplate == null) return;
-        
         command.put("command", "QUERY");
         command.put("relay", true);
-        command.put("resourceTemplate", resourceTemplate.toJSONString());
+        command.put("resourceTemplate", resourceTemplate);
         generalReply(command.toJSONString());
     }
 
@@ -199,11 +195,6 @@ class Client {
     private static JSONObject createResJSONObj(CommandLine initCmd) {
     	JSONObject resource = new JSONObject();
     	
-    	//TODO There will not ALWAYS be a URI e.g. in the case of Query
-//        if(!initCmd.hasOption("uri")) {
-//        	System.out.println("Provide URI for publish.");
-//        	return null;
-//        }
        	String uri = initCmd.hasOption("uri")? initCmd.getOptionValue("uri") : "";
         String name = initCmd.hasOption("name") ? initCmd.getOptionValue("name") : "";
         
@@ -214,7 +205,6 @@ class Client {
             for (String tag: tags_arr){
                 tag_list.add(tag);
             }
-            //tags = tag_list.toJSONString();
         }
         
         String description = initCmd.hasOption("description") ? initCmd.getOptionValue("description") : "";
@@ -237,9 +227,9 @@ class Client {
         //Create a JSONObject command and send it to server
         JSONObject command = new JSONObject();
         JSONObject resource = createResJSONObj(initCmd);
-        if(resource == null) return;
+
         command.put("command", "PUBLISH");
-        command.put("resource", resource.toJSONString());
+        command.put("resource", resource);
         generalReply(command.toJSONString());
     }
     
@@ -247,9 +237,9 @@ class Client {
     public static void RemoveCmd(CommandLine initCmd) {
         JSONObject command = new JSONObject();
         JSONObject resource = createResJSONObj(initCmd);
-        if(resource == null) return;
+
         command.put("command", "REMOVE");
-        command.put("resource", resource.toJSONString());
+        command.put("resource", resource);
         generalReply(command.toJSONString());
     }
     
@@ -257,9 +247,9 @@ class Client {
     public static void FetchCmd(CommandLine initCmd) {
     	JSONObject command = new JSONObject();
     	JSONObject resourceTemplate = createResJSONObj(initCmd);
-        if(resourceTemplate == null) return;
+
         command.put("command", "FETCH");
-        command.put("resourceTemplate", resourceTemplate.toJSONString());
+        command.put("resourceTemplate", resourceTemplate);
         
         try (Socket socket = new Socket(ip, port)){
             //Get I/O streams for connection

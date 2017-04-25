@@ -64,7 +64,7 @@ public class ResourceList {
 		if(len == 0) return null;
 		
 		for(int i = 0; i < len; i++) {    //...return its position in the list if it does.
-			if((re.getOwner().equals(resourceList.get(i).getOwner())) &&
+			if((re.getChannel().equals(resourceList.get(i).getChannel())) &&
 					(re.getUri().equals(resourceList.get(i).getUri()))) {
 				return resourceList.get(i);
 			}

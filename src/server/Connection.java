@@ -105,7 +105,7 @@ public class Connection implements Runnable {
 		JSONArray newServerList = new JSONArray();
 		try{
 			JSONParser parser = new JSONParser();
-			newServerList = (JSONArray) parser.parse((String) client_request.get("serverList"));
+			newServerList = (JSONArray) parser.parse(client_request.get("serverList").toString());
 		} catch (ClassCastException | ParseException e) {
 			JSONObject reply = new JSONObject();
 			reply.put("response", "error");
@@ -135,7 +135,7 @@ public class Connection implements Runnable {
                 JSONParser parser = new JSONParser();
                 
                 // The following should throw an invalid resource exception
-                in_res = this.JSONObj2Resource((JSONObject) parser.parse((String)client_request.get("resourceTemplate")));
+                in_res = this.JSONObj2Resource((JSONObject) parser.parse(client_request.get("resourceTemplate").toString()));
                 
                 // If there was a resourceTemplate AND the template checked out as a valid Resource, report success
                 JSONObject response = new JSONObject();
@@ -148,7 +148,7 @@ public class Connection implements Runnable {
                 ResourceList results = new ResourceList();
                 if (client_request.containsKey("relay")) {
                     if ((Boolean)client_request.get("relay")) {
-//                        results = propagateQuery(client_request, in_res);
+                        results = propagateQuery(client_request, in_res);
                         result_cnt += results.getSize();
                     }
                 }
@@ -234,7 +234,7 @@ public class Connection implements Runnable {
         
         //construct the right query
         JSONParser parser = new JSONParser();
-        JSONObject res = (JSONObject) parser.parse((String)client_request.get("resourceTemplate"));
+        JSONObject res = (JSONObject) parser.parse(client_request.get("resourceTemplate").toString());
         JSONObject command = new JSONObject();
         
         //remove owner and channel and set to "" + relay = false
@@ -242,7 +242,7 @@ public class Connection implements Runnable {
         command.put("relay", false);
             res.put("owner", "");
             res.put("channel", "");
-        command.put("resourceTemplate", res.toJSONString());
+        command.put("resourceTemplate", res);
 
         //TODO implement this as threads, instead of sequential
         //for each server from server list
@@ -252,7 +252,7 @@ public class Connection implements Runnable {
             //Get server details
             JSONObject server = (JSONObject)serv_list.get(i);
             String hostname = (String)server.get("hostname");
-            int port = (int) server.get("port");            
+            int port = Integer.parseInt((String)server.get("port"));            
             
             //Send QUERY command to that server
             Socket socket = new Socket(hostname, port);
@@ -273,7 +273,7 @@ public class Connection implements Runnable {
             while(true) {
                 if(input.available() > 0) {
                     //get results and store in results list
-                    JSONObject temp_response = (JSONObject) parser.parse((String) input.readUTF());
+                    JSONObject temp_response = (JSONObject) parser.parse(input.readUTF());
                     if (temp_response.containsKey("uri")) {
                         Resource temp_res = this.JSONObj2Resource(temp_response);
                         prop_results.addResource(temp_res);
@@ -293,7 +293,7 @@ public class Connection implements Runnable {
     	JSONParser parser = new JSONParser();
 		try{
 			//throw class cast exception for missing resource and\/or secret
-			JSONObject resourceJSON = (JSONObject) parser.parse((String) client_req.get("resource"));
+			JSONObject resourceJSON = (JSONObject) parser.parse(client_req.get("resource").toString());
 			if(!client_req.containsKey("secret")) throw new ClassCastException();
 			
 			//throw server exception invalid resource
@@ -304,8 +304,8 @@ public class Connection implements Runnable {
 			if(uri.toString().equals("")) throw new serverException("invalid resource");
 			
 			//check if URI is a file scheme
-			boolean isFile = "file".equalsIgnoreCase(uri.getScheme());
-			if(isFile) throw new serverException("invalid resource");
+//			boolean isFile = "file".equalsIgnoreCase(uri.getScheme());
+//			if(!isFile) throw new serverException("invalid resource");
 			
 			//check if the file exist
 			//TODO uncomment when submit
@@ -344,7 +344,7 @@ public class Connection implements Runnable {
     	JSONParser parser = new JSONParser();
 		try{
 			//throw class cast exception for missing resource
-			JSONObject resourceJSON = (JSONObject) parser.parse((String) client_req.get("resource"));
+			JSONObject resourceJSON = (JSONObject) parser.parse(client_req.get("resource").toString());
 			
 			//throw server exception invalid resource
 			Resource resource = JSONObj2Resource(resourceJSON);
@@ -383,7 +383,7 @@ public class Connection implements Runnable {
 		JSONParser parser = new JSONParser();
 		try{
 			//throw class cast exception for missing resource
-			JSONObject resourceJSON = (JSONObject) parser.parse((String) client_req.get("resource"));
+			JSONObject resourceJSON = (JSONObject) parser.parse(client_req.get("resource").toString());
 			
 			//throw server exception invalid resource
 			Resource resource = JSONObj2Resource(resourceJSON);
@@ -413,7 +413,7 @@ public class Connection implements Runnable {
 		JSONParser parser = new JSONParser();
 		try{
 			//throw class cast exception for missing resource
-			JSONObject resourceJSON = (JSONObject) parser.parse((String) client_req.get("resource"));
+			JSONObject resourceJSON = (JSONObject) parser.parse(client_req.get("resourceTemplate").toString());
 			
 			//throw server exception invalid resource
 			Resource resourceTemplate = JSONObj2Resource(resourceJSON);
@@ -431,7 +431,7 @@ public class Connection implements Runnable {
 		
 			//Use a known URI, need to check the file afterward ? 
 			URI uri = match.getUri();
-			File f = new File(uri.toString());
+			File f = new File(uri.getHost() + uri.getPath());
 			if(f.exists()) {
 				JSONObject reponse = new JSONObject();
 				reponse.put("response", "success");
@@ -468,6 +468,8 @@ public class Connection implements Runnable {
 				reply.put("errorMessage", e.toString());
 			}
 			output.writeUTF(reply.toJSONString());
+		} catch (Exception e){
+		    e.printStackTrace();
 		}
 	}
 	
@@ -476,11 +478,11 @@ public class Connection implements Runnable {
 	private Resource JSONObj2Resource(JSONObject resource) throws serverException {
 		//handle default value here
 		String Name = resource.containsKey("name") ? (String) resource.get("name") : "";
-		if (Name.contains("\0")) {
+		if (Name.contains("\\0")) {
 			throw new serverException("Invalid resource");
 		}
 		String Description = resource.containsKey("description") ? (String) resource.get("description") : "";
-		if (Description.contains("\0")) {
+		if (Description.contains("\\0")) {
 			throw new serverException("Invalid resource");
 		}
 		
@@ -497,7 +499,7 @@ public class Connection implements Runnable {
 		
 		//TODO When to check if URI is unique or not for a given channel?
 		String uri_s = resource.containsKey("uri") ? (String) resource.get("uri") : "";
-		if (uri_s.contains("\0")) {
+		if (uri_s.contains("\\0")) {
 			throw new serverException("Invalid resource");
 		}
 		URI uri;
@@ -509,12 +511,12 @@ public class Connection implements Runnable {
 		}
 		
 		String Channel = resource.containsKey("channel") ? (String) resource.get("channel") : "";
-		if (Channel.contains("\0")) {
+		if (Channel.contains("\\0")) {
 			throw new serverException("Invalid resource");
 		}
 		
 		String Owner = resource.containsKey("owner") ? (String) resource.get("owner") : "";
-		if (Owner.contains("\0") || Owner.contains("*")) {
+		if (Owner.contains("\\0") || Owner.contains("*")) {
 			throw new serverException("Invalid resource");
 		}
 		String EZserver = hostname+":"+port;
@@ -536,7 +538,7 @@ public class Connection implements Runnable {
         //TODO should value for "tags" be a string or is a JSONArray okay?
         jobj.put("tags", tag_list);
         
-        jobj.put("uri", resource.getUri());
+        jobj.put("uri", resource.getUri().toString());
         jobj.put("channel", resource.getChannel());
         jobj.put("owner", resource.getOwner());
         jobj.put("ezserver", resource.getEZserver());
