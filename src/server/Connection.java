@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import org.apache.commons.cli.CommandLine;
 import org.json.simple.JSONArray;
 
 import org.json.simple.JSONObject;
@@ -30,14 +31,19 @@ public class Connection implements Runnable {
 	private ResourceList resourceList;
 	private ServerList serverList;
 	private String serverSecret;
-	private Boolean debug = true;
+	private Boolean debug;
+	private String hostname;
+	private int port;
 	
-	public Connection(int id, Socket client, ResourceList resourceList, ServerList serverList, String serverSecret) {
+	public Connection(CommandLine cmd, int id, Socket client, ResourceList resourceList, ServerList serverList) {
 		this.id = id;
 		this.client = client;
 		this.resourceList = resourceList;
 		this.serverList = serverList;
-		this.serverSecret = serverSecret;
+		this.serverSecret = cmd.getOptionValue("secret");
+		this.hostname = cmd.getOptionValue("advertisedhostname");
+		this.debug = cmd.hasOption("debug") ? true : false;
+		this.port = Integer.parseInt(cmd.getOptionValue("port"));
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -298,9 +304,8 @@ public class Connection implements Runnable {
 			if(uri.toString().equals("")) throw new serverException("invalid resource");
 			
 			//check if URI is a file scheme
-			boolean isWeb = "http".equalsIgnoreCase(uri.getScheme())
-				    || "https".equalsIgnoreCase(uri.getScheme());
-			if(isWeb) throw new serverException("invalid resource");
+			boolean isFile = "file".equalsIgnoreCase(uri.getScheme());
+			if(isFile) throw new serverException("invalid resource");
 			
 			//check if the file exist
 			//TODO uncomment when submit
@@ -512,12 +517,8 @@ public class Connection implements Runnable {
 		if (Owner.contains("\0") || Owner.contains("*")) {
 			throw new serverException("Invalid resource");
 		}
+		String EZserver = hostname+":"+port;
 		
-		//TODO Store this server's server:port info - system supplied
-		String EZserver = resource.containsKey("ezserver") ? (String) resource.get("ezserver") : "";
-		if (EZserver != null && EZserver.contains("\0")) {
-			throw new serverException("Invalid resource");
-		}
 		return new Resource(Name, Description, tags_slist, uri, Channel, Owner, EZserver);
 	}
 	

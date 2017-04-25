@@ -36,7 +36,6 @@ public class Server extends TimerTask {
     private static int port;
     private static ResourceList resourceList = new ResourceList();
     private static ServerList serverList = new ServerList();
-    private static String serverSecret;
     private static HashMap<String, Long> clientIPList = new HashMap<String, Long>();
     private static long intervalLimit = 1*1000;
     
@@ -71,7 +70,6 @@ public class Server extends TimerTask {
         
         if (cmd.hasOption("port") && cmd.hasOption("secret")) {
             port = Integer.parseInt(cmd.getOptionValue("port"));
-            serverSecret = cmd.getOptionValue("secret");
         } else {
             System.out.println("Please provide enough options.");
             System.exit(0);
@@ -110,7 +108,7 @@ public class Server extends TimerTask {
                 System.out.println("Client " + connections_cnt + " requesting connection.");
                 
                 //Create, and start, a new thread that processes incoming connections
-                executor.submit(new Connection(connections_cnt, client, resourceList, serverList, serverSecret));
+                executor.submit(new Connection(cmd, connections_cnt, client, resourceList, serverList));
             }
         } catch (Exception e) {
             e.printStackTrace();
