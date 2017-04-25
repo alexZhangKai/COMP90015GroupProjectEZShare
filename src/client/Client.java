@@ -145,7 +145,7 @@ class Client {
         String secret = initCmd.getOptionValue("secret");
         command.put("command", "SHARE");
         command.put("secret", secret);
-        command.put("resource", resource.toJSONString());
+        command.put("resource", resource);
         generalReply(command.toJSONString());
     }
     
@@ -158,7 +158,7 @@ class Client {
         
         command.put("command", "QUERY");
         command.put("relay", true);
-        command.put("resourceTemplate", resourceTemplate.toJSONString());
+        command.put("resourceTemplate", resourceTemplate);
         generalReply(command.toJSONString());
     }
 
@@ -229,7 +229,7 @@ class Client {
         JSONObject resource = createResJSONObj(initCmd);
 
         command.put("command", "PUBLISH");
-        command.put("resource", resource.toJSONString());
+        command.put("resource", resource);
         generalReply(command.toJSONString());
     }
     
@@ -239,7 +239,7 @@ class Client {
         JSONObject resource = createResJSONObj(initCmd);
 
         command.put("command", "REMOVE");
-        command.put("resource", resource.toJSONString());
+        command.put("resource", resource);
         generalReply(command.toJSONString());
     }
     
@@ -249,7 +249,7 @@ class Client {
     	JSONObject resourceTemplate = createResJSONObj(initCmd);
 
         command.put("command", "FETCH");
-        command.put("resourceTemplate", resourceTemplate.toJSONString());
+        command.put("resourceTemplate", resourceTemplate);
         
         try (Socket socket = new Socket(ip, port)){
             //Get I/O streams for connection
