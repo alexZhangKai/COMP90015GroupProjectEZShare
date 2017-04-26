@@ -558,20 +558,17 @@ public class Connection implements Runnable {
 		}
 	}
 	
-	//TODO this needs to throw an error if JSON is NOT a proper resource i.e. does not contain the required fields
-	//TODO Also check for null values when key exists!
 	private Resource JSONObj2Resource(JSONObject resource) throws serverException {
 		//handle default value here
-		String Name = resource.containsKey("name") ? (String) resource.get("name") : "";
+		String Name = resource.containsKey("name") ? (resource.get("name") == null ? "" : (String) resource.get("name")) : "";
 		if (Name.contains("\\0")) {
 			throw new serverException("Invalid resource");
 		}
-		String Description = resource.containsKey("description") ? (String) resource.get("description") : "";
+		String Description = resource.containsKey("description") ? (resource.get("name") == null ? "" : (String) resource.get("description")) : "";
 		if (Description.contains("\\0")) {
 			throw new serverException("Invalid resource");
 		}
 		
-		//TODO String[] Tags is different deal with it later - unsure about check
 		JSONArray tags_jarr = resource.containsKey("tags")? (JSONArray) resource.get("tags") : null;
 		List<String> tags_slist = new ArrayList<String>();
 		
@@ -581,12 +578,11 @@ public class Connection implements Runnable {
 		    }
 		}
 		
-		
-		//TODO When to check if URI is unique or not for a given channel?
-		String uri_s = resource.containsKey("uri") ? (String) resource.get("uri") : "";
+		String uri_s = resource.containsKey("uri") ? (resource.get("name") == null ? "" : (String) resource.get("uri")) : "";
 		if (uri_s.contains("\\0")) {
 			throw new serverException("Invalid resource");
 		}
+		
 		URI uri;
 		try {
 			uri = new URI(uri_s);
@@ -595,12 +591,12 @@ public class Connection implements Runnable {
 			throw new serverException("Invalid resrouce");
 		}
 		
-		String Channel = resource.containsKey("channel") ? (String) resource.get("channel") : "";
+		String Channel = resource.containsKey("channel") ? (resource.get("name") == null ? "" : (String) resource.get("channel")) : "";
 		if (Channel.contains("\\0")) {
 			throw new serverException("Invalid resource");
 		}
 		
-		String Owner = resource.containsKey("owner") ? (String) resource.get("owner") : "";
+		String Owner = resource.containsKey("owner") ? (resource.get("name") == null ? "" : (String) resource.get("owner")) : "";
 		if (Owner.contains("\\0") || Owner.contains("*")) {
 			throw new serverException("Invalid resource");
 		}
