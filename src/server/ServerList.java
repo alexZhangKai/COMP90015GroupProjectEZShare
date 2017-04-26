@@ -8,7 +8,7 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
 public class ServerList {
-	private JSONArray serverList = new JSONArray();
+	private static JSONArray serverList = new JSONArray();
 	
 	@SuppressWarnings("unchecked")
 	public synchronized void update(JSONArray newList, String hostname, int hostport) 
@@ -46,9 +46,14 @@ public class ServerList {
 	}
 	
 	public JSONObject select() {
-		if(serverList.size() > 0) {
+		//TODO remove after testing
+	    System.out.println(this.serverList.toJSONString());
+	    if(serverList.size() > 0) {
 			int random = ThreadLocalRandom.current().nextInt(0, serverList.size());
-			return (JSONObject) serverList.get(random);
+			JSONObject randomServer = (JSONObject) serverList.get(random);
+			//TODO remove
+			System.out.println(randomServer.toJSONString());
+			return randomServer;
 		}
 		return null;
 	}

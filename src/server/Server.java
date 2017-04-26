@@ -144,6 +144,7 @@ public class Server extends TimerTask {
 	    System.out.println("\n"+new Timestamp(System.currentTimeMillis())+" - [INFO] - started Exchanger\n");
 	    
 		if(serverList.getLength() > 0) {
+		    
 			JSONObject receiver = serverList.select();
 			String ip = (String) receiver.get("hostname");
 			int port = Integer.parseInt(receiver.get("port").toString());
