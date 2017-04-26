@@ -13,6 +13,7 @@ package server;
 
 import java.io.*;
 import java.net.*;
+import java.rmi.ServerException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -486,18 +487,7 @@ public class Connection implements Runnable {
 			Resource match = resourceList.queryForChannelURI(resourceTemplate);
 		
 			//handle no match error
-			if(match == null) {
-				JSONObject reply = new JSONObject();
-				reply.put("response", "error");
-				reply.put("errorMessage", "no match resource");
-				output.writeUTF(reply.toJSONString());
-				if (debug) {
-	                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + reply.toJSONString());
-	            }
-				
-				//TODO Deal with this 'return'?
-				return;
-			}
+			if(match == null) throw new ServerException("no match resource");
 		
 			//Use a known URI, need to check the file afterward ? 
 			URI uri = match.getUri();
