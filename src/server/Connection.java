@@ -113,7 +113,7 @@ public class Connection implements Runnable {
 			output.writeUTF(reply.toJSONString());
 		}
 		try {
-			this.serverList.update(newServerList);
+			this.serverList.update(newServerList, hostname, port);
 			JSONObject reply = new JSONObject();
 	        reply.put("response", "success");
 	        output.writeUTF(reply.toJSONString());

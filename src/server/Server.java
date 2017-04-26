@@ -27,6 +27,7 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
 public class Server extends TimerTask {
@@ -94,7 +95,7 @@ public class Server extends TimerTask {
             //TODO comment exchange for test
             TimerTask timerTask = new Server();
     		Timer timer = new Timer(true);
-    		//timer.scheduleAtFixedRate(timerTask, 1, 10*60*1000);
+    		timer.scheduleAtFixedRate(timerTask, 1, 10*60*1000);
             
             //Keep listening for connections and use a thread pool with 2 threads
             ExecutorService executor = Executors.newFixedThreadPool(MAX_THREADS);
@@ -141,7 +142,14 @@ public class Server extends TimerTask {
 	            long startTime = System.currentTimeMillis();
 	            JSONObject command = new JSONObject();
 	            command.put("command", "EXCHANGE");
-	            command.put("serverList", serverList.getServerList());
+	            
+	            JSONArray serverArr = serverList.getServerList();
+	            JSONObject host = new JSONObject();
+	            host.put("hostname", hostname);
+	            host.put("port", port);
+	            serverArr.add(host);
+	            
+	            command.put("serverList", serverArr);
 	            output.writeUTF(command.toJSONString());
 	            output.flush();
 	            
