@@ -146,7 +146,8 @@ public class Server extends TimerTask {
 		if(serverList.getLength() > 0) {
 			JSONObject receiver = serverList.select();
 			String ip = (String) receiver.get("hostname");
-			int port = Integer.parseInt((String)receiver.get("port"));
+			int port = Integer.parseInt(receiver.get("port").toString());
+			
 			try(Socket soc = new Socket(ip, port)){
 				DataInputStream input = new DataInputStream(soc.getInputStream());
 	            DataOutputStream output = new DataOutputStream(soc.getOutputStream());
