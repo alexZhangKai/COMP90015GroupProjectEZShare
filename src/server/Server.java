@@ -28,6 +28,7 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
 
@@ -149,7 +150,14 @@ public class Server extends TimerTask {
 	            long startTime = System.currentTimeMillis();
 	            JSONObject command = new JSONObject();
 	            command.put("command", "EXCHANGE");
-	            command.put("serverList", serverList.getServerList());
+	            
+	            JSONArray serverArr = serverList.getServerList();
+	            JSONObject host = new JSONObject();
+	            host.put("hostname", hostname);
+	            host.put("port", port);
+	            serverArr.add(host);
+	            
+	            command.put("serverList", serverArr);
 	            output.writeUTF(command.toJSONString());
 	            if (debug) {
                     System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + command.toJSONString());
