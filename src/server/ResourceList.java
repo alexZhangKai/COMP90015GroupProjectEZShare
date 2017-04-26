@@ -76,7 +76,7 @@ public class ResourceList {
 		return resourceList.size();
 	}
 	
-	//TODO Is this bad practice? [used for the QUERY command] - move code here.
+	//TODO Move the method that uses this in here! Stop exposing members outside. [used in Query]
 	public ArrayList<Resource> getResList(){
 	    return this.resourceList;
 	}

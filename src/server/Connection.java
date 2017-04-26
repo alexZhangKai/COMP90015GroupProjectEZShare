@@ -13,6 +13,7 @@ package server;
 
 import java.io.*;
 import java.net.*;
+import java.rmi.ServerException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -27,8 +28,7 @@ import org.json.simple.parser.ParseException;
 
 public class Connection implements Runnable {
 	private static final int NUM_SEC = 2;
-    private int id;
-	private Socket client;
+    private Socket client;
 	private ResourceList resourceList;
 	private ServerList serverList;
 	private String serverSecret;
@@ -36,8 +36,7 @@ public class Connection implements Runnable {
 	private String hostname;
 	private int port;
 	
-	public Connection(CommandLine cmd, int id, Socket client, ResourceList resourceList, ServerList serverList) {
-		this.id = id;
+	public Connection(CommandLine cmd, Socket client, ResourceList resourceList, ServerList serverList) {
 		this.client = client;
 		this.resourceList = resourceList;
 		this.serverList = serverList;
@@ -173,7 +172,7 @@ public class Connection implements Runnable {
                         result_cnt += results.getSize();
                     }
                 }
-                //TODO something wrong with the conditions, there is no channel value in relay, cannot match
+
                 //Query current resource list for resources that match the template
                 for (Resource curr_res: resourceList.getResList()){
                     if (in_res.getChannel().equals(curr_res.getChannel()) && 
@@ -316,7 +315,6 @@ public class Connection implements Runnable {
                         prop_results.addResource(temp_res);
                     }
                 }
-                //TODO set it large when debug like 100 times more
                 if ((System.currentTimeMillis() - startTime) > NUM_SEC*1000){
                     break;
                 }
@@ -342,13 +340,12 @@ public class Connection implements Runnable {
 			if(uri.toString().equals("")) throw new serverException("invalid resource");
 			
 			//check if URI is a file scheme
-//			boolean isFile = "file".equalsIgnoreCase(uri.getScheme());
-//			if(!isFile) throw new serverException("invalid resource");
+			boolean isFile = "file".equalsIgnoreCase(uri.getScheme());
+			if(!isFile) throw new serverException("invalid resource");
 			
 			//check if the file exist
-			//TODO uncomment when submit
-			//File f = new File(uri.toString());
-			//if(!f.exists()) throw new serverException("invalid resource");
+			File f = new File(uri.toString());
+			if(!f.exists()) throw new serverException("invalid resource");
 			
 			//check if secret is equal
 			if(!client_req.get("secret").equals(this.serverSecret)) throw new serverException("incorrect secret");
@@ -486,18 +483,7 @@ public class Connection implements Runnable {
 			Resource match = resourceList.queryForChannelURI(resourceTemplate);
 		
 			//handle no match error
-			if(match == null) {
-				JSONObject reply = new JSONObject();
-				reply.put("response", "error");
-				reply.put("errorMessage", "no match resource");
-				output.writeUTF(reply.toJSONString());
-				if (debug) {
-	                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + reply.toJSONString());
-	            }
-				
-				//TODO Deal with this 'return'?
-				return;
-			}
+			if(match == null) throw new ServerException("no match resource");
 		
 			//Use a known URI, need to check the file afterward ? 
 			URI uri = match.getUri();
@@ -558,20 +544,17 @@ public class Connection implements Runnable {
 		}
 	}
 	
-	//TODO this needs to throw an error if JSON is NOT a proper resource i.e. does not contain the required fields
-	//TODO Also check for null values when key exists!
 	private Resource JSONObj2Resource(JSONObject resource) throws serverException {
 		//handle default value here
-		String Name = resource.containsKey("name") ? (String) resource.get("name") : "";
+		String Name = resource.containsKey("name") ? (resource.get("name") == null ? "" : (String) resource.get("name")) : "";
 		if (Name.contains("\\0")) {
 			throw new serverException("Invalid resource");
 		}
-		String Description = resource.containsKey("description") ? (String) resource.get("description") : "";
+		String Description = resource.containsKey("description") ? (resource.get("name") == null ? "" : (String) resource.get("description")) : "";
 		if (Description.contains("\\0")) {
 			throw new serverException("Invalid resource");
 		}
 		
-		//TODO String[] Tags is different deal with it later - unsure about check
 		JSONArray tags_jarr = resource.containsKey("tags")? (JSONArray) resource.get("tags") : null;
 		List<String> tags_slist = new ArrayList<String>();
 		
@@ -581,12 +564,11 @@ public class Connection implements Runnable {
 		    }
 		}
 		
-		
-		//TODO When to check if URI is unique or not for a given channel?
-		String uri_s = resource.containsKey("uri") ? (String) resource.get("uri") : "";
+		String uri_s = resource.containsKey("uri") ? (resource.get("name") == null ? "" : (String) resource.get("uri")) : "";
 		if (uri_s.contains("\\0")) {
 			throw new serverException("Invalid resource");
 		}
+		
 		URI uri;
 		try {
 			uri = new URI(uri_s);
@@ -595,12 +577,12 @@ public class Connection implements Runnable {
 			throw new serverException("Invalid resrouce");
 		}
 		
-		String Channel = resource.containsKey("channel") ? (String) resource.get("channel") : "";
+		String Channel = resource.containsKey("channel") ? (resource.get("name") == null ? "" : (String) resource.get("channel")) : "";
 		if (Channel.contains("\\0")) {
 			throw new serverException("Invalid resource");
 		}
 		
-		String Owner = resource.containsKey("owner") ? (String) resource.get("owner") : "";
+		String Owner = resource.containsKey("owner") ? (resource.get("name") == null ? "" : (String) resource.get("owner")) : "";
 		if (Owner.contains("\\0") || Owner.contains("*")) {
 			throw new serverException("Invalid resource");
 		}
@@ -620,7 +602,6 @@ public class Connection implements Runnable {
         for (String tag: resource.getTags()){
             tag_list.add(tag);
         }
-        //TODO should value for "tags" be a string or is a JSONArray okay?
         jobj.put("tags", tag_list);
         
         jobj.put("uri", resource.getUri().toString());

@@ -40,7 +40,8 @@ public class Server extends TimerTask {
     private static ResourceList resourceList = new ResourceList();
     private static ServerList serverList = new ServerList();
     private static HashMap<String, Long> clientIPList = new HashMap<String, Long>();
-    private static long intervalLimit = 1*1000;
+    private static long connectionIntervalLimit = 1*1000;
+    private static long exchangeIntervalLimit = 10*60;
     private static String hostname;
     private static String secret;
     private static Boolean debug = false;
@@ -85,6 +86,9 @@ public class Server extends TimerTask {
             Server.debug = true;
             System.out.println(new Timestamp(System.currentTimeMillis()) + " - [INFO] - setting debug on\n");
         }
+        if (cmd.hasOption("exchangeinterval")) {
+            Server.exchangeIntervalLimit = Long.parseLong(cmd.getOptionValue("exchangeinterval"));
+        }
         
        System.out.println(new Timestamp(System.currentTimeMillis()) + " - [INFO] - Starting the EZShare Server\n"); 
        System.out.println(new Timestamp(System.currentTimeMillis()) + " - [INFO] - using secret: " + Server.secret + "\n");
@@ -98,10 +102,9 @@ public class Server extends TimerTask {
             System.out.println(new Timestamp(System.currentTimeMillis()) + " - [INFO] - bound to port " + Server.port);
              
             //Set exchange schema
-            //TODO comment exchange for test
             TimerTask timerTask = new Server();
     		Timer timer = new Timer(true);
-//    		timer.scheduleAtFixedRate(timerTask, 1, 10*60*1000);
+    		timer.scheduleAtFixedRate(timerTask, 1, Server.exchangeIntervalLimit*1000);
             
             //Keep listening for connections and use a thread pool with 2 threads
             ExecutorService executor = Executors.newFixedThreadPool(MAX_THREADS);
@@ -111,7 +114,7 @@ public class Server extends TimerTask {
                 //check connection interval time limit
                 String clientIP = client.getInetAddress().toString();
                 if(clientIPList.containsKey(clientIP)) {
-                	if((System.currentTimeMillis() - clientIPList.get(clientIP)) > intervalLimit) {
+                	if((System.currentTimeMillis() - clientIPList.get(clientIP)) > connectionIntervalLimit) {
                 		clientIPList.put(clientIP, System.currentTimeMillis());
                 	} else {
                 		System.out.println(new Timestamp(System.currentTimeMillis())+" - [WARNING] - "+clientIP+" tried connect too soon.\n");
@@ -127,7 +130,7 @@ public class Server extends TimerTask {
                     System.out.println(new Timestamp(System.currentTimeMillis()) + " - [CONN] - Client #" + connections_cnt + ": " + clientIP + " has connected.");
                 }
                 //Create, and start, a new thread that processes incoming connections
-                executor.submit(new Connection(cmd, connections_cnt, client, resourceList, serverList));
+                executor.submit(new Connection(cmd, client, resourceList, serverList));
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -183,7 +186,7 @@ public class Server extends TimerTask {
 	}
 	
 	/*
-	 * don't use this method or we have to make the clientIPList synchronized
+	 * don't use this method or we have to make the clientIPList synchronised
 	private void updateClientIPList() {
 	    //TODO Update client IP list method not used - needs to be implemented?
 		Iterator<Entry<String, Long>> it = clientIPList.entrySet().iterator();
