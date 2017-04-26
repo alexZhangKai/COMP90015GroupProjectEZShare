@@ -129,7 +129,7 @@ class Client {
     		String[] hostAndPort = server.split(":");
     		JSONObject ele = new JSONObject();
     		ele.put("hostname", hostAndPort[0]);
-    		ele.put("port", hostAndPort[1]);
+    		ele.put("port", Integer.parseInt(hostAndPort[1]));
     		servers.add(ele);
     	}
     	command.put("command", "EXCHANGE");

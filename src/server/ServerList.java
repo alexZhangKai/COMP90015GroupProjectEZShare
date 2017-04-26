@@ -11,8 +11,11 @@ public class ServerList {
 	private JSONArray serverList = new JSONArray();
 	
 	@SuppressWarnings("unchecked")
-	public synchronized void update(JSONArray newList) 
+	public synchronized void update(JSONArray newList, String hostname, int hostport) 
 			throws ClassCastException, UnknownHostException, NumberFormatException, serverException {
+			JSONObject host = new JSONObject();
+			host.put("hostname", hostname);
+			host.put("port", hostport);
 		for(Object newEle : newList) {
 			JSONObject newServer = (JSONObject) newEle;
 			
@@ -24,6 +27,8 @@ public class ServerList {
 			}
 			
 			boolean add = true;
+			if(host.equals(newEle)) add = false;
+			
 			for(Object oldEle : serverList) {
 				JSONObject oldServer = (JSONObject) oldEle;
 				if(oldServer.equals(newServer)) add = false;
