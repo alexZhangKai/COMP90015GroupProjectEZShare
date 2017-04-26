@@ -172,7 +172,6 @@ class Client {
             if (debug) {
                 System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + command);
             }
-            System.out.println("request sent");
             output.flush();
             
             JSONParser JSONparser = new JSONParser();
@@ -200,10 +199,10 @@ class Client {
             			byte[] receiveBuffer = new byte[chunkSize];
             			String fileName = "clientFile/test.png";
             			RandomAccessFile downloadingFile = new RandomAccessFile(fileName, "rw");
+
             			//remaining file size
             			int num;
-            			
-            			System.out.println("Downloading file of size" + fileSizeRemaining);
+                        System.out.println(new Timestamp(System.currentTimeMillis())+" - [INFO] - Downloading file of size: " + fileSizeRemaining + " bytes.");
             			while((num = input.read(receiveBuffer)) > 0) {
             				downloadingFile.write(Arrays.copyOf(receiveBuffer, num));
             				fileSizeRemaining -= num;
@@ -215,20 +214,20 @@ class Client {
             					break;
             				}
             			}
-            			System.out.println("File received!");
+            			
+            			System.out.println(new Timestamp(System.currentTimeMillis())+" - [INFO] - File downloaded.");
             			downloadingFile.close();
             		}
             		
             		//the last reply: resultSize
             		if(reply.containsKey("resultSize")) {
-            			System.out.println(reply.toJSONString());
-            		}
-            		
-            		//connection timeout
-            		if((System.currentTimeMillis() - start) > 5*1000) {
-            			break;
+            		    break;
             		}
             	}
+            	//connection timeout
+                if((System.currentTimeMillis() - start) > NUM_SEC*1000) {
+                    break;
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -324,13 +323,22 @@ class Client {
                 System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + request);
             }
                         
+            JSONParser parser = new JSONParser();
             while(true) {
                 if(input.available() > 0) {
                     String recv = input.readUTF();
+                    JSONObject reply = (JSONObject) parser.parse(recv);
                     if (debug) {
                         System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - RECEIVED: " + recv);
                     }
+                    else {
+                        System.out.println("Response from server: " + recv);
+                    }
+                    if (reply.containsKey("resultSize")) {
+                        break;
+                    }
                 }
+                
                 if ((System.currentTimeMillis() - startTime) > NUM_SEC*1000){
                     break;
                 }
