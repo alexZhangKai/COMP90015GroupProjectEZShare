@@ -35,20 +35,21 @@ import org.json.simple.JSONObject;
 
 public class Server extends TimerTask {
 
+    private static long connectionIntervalLimit = 1*1000;   //milliseconds
+    private static long exchangeIntervalLimit = 10*60;   //seconds
     private static final int MAX_THREADS = 2;
+    private static final int SOCKET_TIMEOUT_MS = 2*1000;    //ms
+    
     private static int connections_cnt = 0;
     private static int port;
     private static ResourceList resourceList = new ResourceList();
     private static ServerList serverList = new ServerList();
     private static HashMap<String, Long> clientIPList = new HashMap<String, Long>();
-    private static long connectionIntervalLimit = 1*1000;   //milliseconds
-    private static long exchangeIntervalLimit = 10;   //seconds
     private static String hostname;
     private static String secret;
     private static Boolean debug = false;
-    
     private static final Map<String, Boolean> argOptions;
-    private static final int SOCKET_TIMEOUT_MS = 2*1000;    //ms
+    
     static{
         argOptions = new HashMap<>();
         argOptions.put("advertisedhostname", true);
@@ -73,7 +74,8 @@ public class Server extends TimerTask {
         try {
             cmd = parser.parse(options, args);
         } catch (ParseException e) {
-            e.printStackTrace();
+            System.out.println("Please provide correct options.");
+            System.exit(0);
         }
         
         if (cmd.hasOption("port") && cmd.hasOption("secret") && cmd.hasOption("advertisedhostname")) {
@@ -190,8 +192,8 @@ public class Server extends TimerTask {
                 serverList.remove(receiver);
             } 
 			catch (IOException e) {
+				System.out.println(new Timestamp(System.currentTimeMillis())+" - [ERROR] - IO Exception occurred.");
 				serverList.remove(receiver);
-				e.printStackTrace();
 			}
 		}		
 	}

@@ -70,7 +70,8 @@ class Client {
         try {
             initCmd = parser.parse(initOptions, args);
         } catch (ParseException e) {
-            e.printStackTrace();
+            System.out.println("Please provide correct options.");
+            System.exit(0);
         }
         if (initCmd.hasOption("port") && initCmd.hasOption("host")) {
             port = Integer.parseInt(initCmd.getOptionValue("port"));
@@ -103,126 +104,7 @@ class Client {
         } else {
             System.out.println("Please use valid arguments.");
         }
-    }
-     
-    @SuppressWarnings("unchecked")
-    private static void MissingCmd() {
-        JSONObject jobj = new JSONObject();
-        jobj.put("uwotm8", "blah");
-        Client.generalReply(jobj.toString());
-    }
-        
-    @SuppressWarnings("unchecked")
-    private static void InvalidCmd() {
-        JSONObject jobj = new JSONObject();
-        jobj.put("command", "blah");
-        Client.generalReply(jobj.toString());   
-    }
-    
-    @SuppressWarnings("unchecked")
-	private static void ExchangeCmd(CommandLine initCmd) {
-    	JSONObject command = new JSONObject();
-
-    	String[] serversArr = initCmd.getOptionValue("servers").split(",");
-    	JSONArray servers = new JSONArray();
-    	for(String server : serversArr) {
-    		String[] hostAndPort = server.split(":");
-    		JSONObject ele = new JSONObject();
-    		ele.put("hostname", hostAndPort[0]);
-    		ele.put("port", Integer.parseInt(hostAndPort[1]));
-    		servers.add(ele);
-    	}
-    	command.put("command", "EXCHANGE");
-    	command.put("serverList", servers);
-    	generalReply(command.toJSONString());
-    }
-    
-    @SuppressWarnings("unchecked")
-    public static void ShareCmd(CommandLine initCmd) {
-    	//Create a JSONObject command and send it to server
-        JSONObject command = new JSONObject();
-        JSONObject resource = createResJSONObj(initCmd);
-
-        String secret = initCmd.getOptionValue("secret");
-        command.put("command", "SHARE");
-        command.put("secret", secret);
-        command.put("resource", resource);
-        generalReply(command.toJSONString());
-    }
-    
-    @SuppressWarnings("unchecked")
-    private static void QueryCmd(CommandLine initCmd) {
-        JSONObject command = new JSONObject();
-        JSONObject resourceTemplate = createResJSONObj(initCmd);
-        
-        command.put("command", "QUERY");
-        command.put("relay", true);
-        command.put("resourceTemplate", resourceTemplate);
-        generalReply(command.toJSONString());
-    }
-
-    public static void generalReply(String request) {
-    	try (Socket socket = new Socket(ip, port)){
-            //Get I/O streams for connection
-            DataInputStream input = new DataInputStream(socket.getInputStream());
-            DataOutputStream output = new DataOutputStream(socket.getOutputStream());
-
-            //record start time
-            long startTime = System.currentTimeMillis();
-            
-            //send request
-            output.writeUTF(request);
-            output.flush();
-            if (debug) {
-                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + request);
-            }
-                        
-            while(true) {
-            	if(input.available() > 0) {
-            	    String recv = input.readUTF();
-            		if (debug) {
-                        System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - RECEIVED: " + recv);
-                    }
-            	}
-            	if ((System.currentTimeMillis() - startTime) > NUM_SEC*1000){
-            		break;
-            	}
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-    
-    @SuppressWarnings("unchecked")  
-    private static JSONObject createResJSONObj(CommandLine initCmd) {
-    	JSONObject resource = new JSONObject();
-    	
-       	String uri = initCmd.hasOption("uri")? initCmd.getOptionValue("uri") : "";
-        String name = initCmd.hasOption("name") ? initCmd.getOptionValue("name") : "";
-        
-        JSONArray tag_list = new JSONArray();
-        if (initCmd.hasOption("tags")) {
-            String[] tags_arr = initCmd.getOptionValue("tags").split(",");
-            tag_list = new JSONArray();
-            for (String tag: tags_arr){
-                tag_list.add(tag);
-            }
-        }
-        
-        String description = initCmd.hasOption("description") ? initCmd.getOptionValue("description") : "";
-        String channel = initCmd.hasOption("channel") ? initCmd.getOptionValue("channel") : "";
-        String owner = initCmd.hasOption("owner") ? initCmd.getOptionValue("owner") : "";
-                
-        resource.put("name", name);            
-        resource.put("tags", tag_list);
-        resource.put("description", description);
-        resource.put("uri", uri);
-        resource.put("channel", channel);
-        resource.put("owner", owner);
-        resource.put("ezserver", null);
-        
-        return resource;
-    }
+    }    
     
     @SuppressWarnings("unchecked")  
     public static void PublishCmd(CommandLine initCmd) {
@@ -242,6 +124,30 @@ class Client {
 
         command.put("command", "REMOVE");
         command.put("resource", resource);
+        generalReply(command.toJSONString());
+    }
+    
+    @SuppressWarnings("unchecked")
+    public static void ShareCmd(CommandLine initCmd) {
+        //Create a JSONObject command and send it to server
+        JSONObject command = new JSONObject();
+        JSONObject resource = createResJSONObj(initCmd);
+
+        String secret = initCmd.getOptionValue("secret");
+        command.put("command", "SHARE");
+        command.put("secret", secret);
+        command.put("resource", resource);
+        generalReply(command.toJSONString());
+    }
+    
+    @SuppressWarnings("unchecked")
+    private static void QueryCmd(CommandLine initCmd) {
+        JSONObject command = new JSONObject();
+        JSONObject resourceTemplate = createResJSONObj(initCmd);
+        
+        command.put("command", "QUERY");
+        command.put("relay", true);
+        command.put("resourceTemplate", resourceTemplate);
         generalReply(command.toJSONString());
     }
     
@@ -329,13 +235,108 @@ class Client {
         }
     }
     
+    @SuppressWarnings("unchecked")
+    private static void ExchangeCmd(CommandLine initCmd) {
+        JSONObject command = new JSONObject();
+
+        String[] serversArr = initCmd.getOptionValue("servers").split(",");
+        JSONArray servers = new JSONArray();
+        for(String server : serversArr) {
+            String[] hostAndPort = server.split(":");
+            JSONObject ele = new JSONObject();
+            ele.put("hostname", hostAndPort[0]);
+            ele.put("port", Integer.parseInt(hostAndPort[1]));
+            servers.add(ele);
+        }
+        command.put("command", "EXCHANGE");
+        command.put("serverList", servers);
+        generalReply(command.toJSONString());
+    }
+    
     public static int setChunkSize(long fileSizeRemaining) {
-    	int chunkSize = 1024*1024;
-    	
-    	if(fileSizeRemaining < chunkSize) {
-    		chunkSize = (int) fileSizeRemaining;
-    	}
-    	
-    	return chunkSize;
+        int chunkSize = 1024*1024;
+        
+        if(fileSizeRemaining < chunkSize) {
+            chunkSize = (int) fileSizeRemaining;
+        }
+        
+        return chunkSize;
+    }
+    
+    @SuppressWarnings("unchecked")
+    private static void MissingCmd() {
+        JSONObject jobj = new JSONObject();
+        jobj.put("uwotm8", "blah");
+        Client.generalReply(jobj.toString());
+    }
+        
+    @SuppressWarnings("unchecked")
+    private static void InvalidCmd() {
+        JSONObject jobj = new JSONObject();
+        jobj.put("command", "blah");
+        Client.generalReply(jobj.toString());   
+    }
+    
+    @SuppressWarnings("unchecked")  
+    private static JSONObject createResJSONObj(CommandLine initCmd) {
+        JSONObject resource = new JSONObject();
+        
+        String uri = initCmd.hasOption("uri")? initCmd.getOptionValue("uri") : "";
+        String name = initCmd.hasOption("name") ? initCmd.getOptionValue("name") : "";
+        
+        JSONArray tag_list = new JSONArray();
+        if (initCmd.hasOption("tags")) {
+            String[] tags_arr = initCmd.getOptionValue("tags").split(",");
+            tag_list = new JSONArray();
+            for (String tag: tags_arr){
+                tag_list.add(tag);
+            }
+        }
+        
+        String description = initCmd.hasOption("description") ? initCmd.getOptionValue("description") : "";
+        String channel = initCmd.hasOption("channel") ? initCmd.getOptionValue("channel") : "";
+        String owner = initCmd.hasOption("owner") ? initCmd.getOptionValue("owner") : "";
+                
+        resource.put("name", name);            
+        resource.put("tags", tag_list);
+        resource.put("description", description);
+        resource.put("uri", uri);
+        resource.put("channel", channel);
+        resource.put("owner", owner);
+        resource.put("ezserver", null);
+        
+        return resource;
+    }
+    
+    public static void generalReply(String request) {
+        try (Socket socket = new Socket(ip, port)){
+            //Get I/O streams for connection
+            DataInputStream input = new DataInputStream(socket.getInputStream());
+            DataOutputStream output = new DataOutputStream(socket.getOutputStream());
+
+            //record start time
+            long startTime = System.currentTimeMillis();
+            
+            //send request
+            output.writeUTF(request);
+            output.flush();
+            if (debug) {
+                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + request);
+            }
+                        
+            while(true) {
+                if(input.available() > 0) {
+                    String recv = input.readUTF();
+                    if (debug) {
+                        System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - RECEIVED: " + recv);
+                    }
+                }
+                if ((System.currentTimeMillis() - startTime) > NUM_SEC*1000){
+                    break;
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }
