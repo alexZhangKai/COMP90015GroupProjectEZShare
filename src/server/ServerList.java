@@ -41,6 +41,8 @@ public class ServerList {
 			}
 			if(add) serverList.add(newServer);
 		}		
+		//TODO testing
+		System.out.println("Server list: " + serverList.toJSONString());
 	}
 	
 	public JSONObject select() {

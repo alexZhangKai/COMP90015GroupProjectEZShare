@@ -41,7 +41,7 @@ public class Server extends TimerTask {
     private static ServerList serverList = new ServerList();
     private static HashMap<String, Long> clientIPList = new HashMap<String, Long>();
     private static long connectionIntervalLimit = 1*1000;   //milliseconds
-    private static long exchangeIntervalLimit = 1*60;   //seconds
+    private static long exchangeIntervalLimit = 10;   //seconds
     private static String hostname;
     private static String secret;
     private static Boolean debug = false;
@@ -176,6 +176,7 @@ public class Server extends TimerTask {
 	                    }
 	            	}
 	            	if ((System.currentTimeMillis() - startTime) > 5*1000){
+	            	    soc.close();
 	            		break;
 	            	}
 	            }
