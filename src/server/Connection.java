@@ -13,6 +13,7 @@ package server;
 
 import java.io.*;
 import java.net.*;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -51,13 +52,15 @@ public class Connection implements Runnable {
 	
     @Override
 	public void run() {
-		System.out.println("Connection: " + id);
 		try {
 			DataInputStream input = new DataInputStream(client.getInputStream());
 			DataOutputStream output = new DataOutputStream(client.getOutputStream());			
 			JSONParser parser = new JSONParser();
 			
 			JSONObject client_request = (JSONObject) parser.parse(input.readUTF());
+			if (debug) {
+                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - RECEIVED: " + client_request);
+            }
 			
 			if(!client_request.containsKey("command")) throw new ClassCastException();
 			switch((String) client_request.get("command")) {
@@ -84,6 +87,9 @@ public class Connection implements Runnable {
 				reply.put("response", "error");
 				reply.put("errorMessage", "invalid command");
 				output.writeUTF(reply.toJSONString());
+				if (debug) {
+                    System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + reply.toJSONString());
+                }
 			}	
 		} catch (IOException e) {
       e.printStackTrace();
@@ -94,6 +100,9 @@ public class Connection implements Runnable {
 			try {
 				DataOutputStream output = new DataOutputStream(client.getOutputStream());
 				output.writeUTF(reply.toJSONString());
+				if (debug) {
+                    System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + reply.toJSONString());
+                }
 			} catch (IOException e1) {
 				e1.printStackTrace();
 			}
@@ -111,17 +120,26 @@ public class Connection implements Runnable {
 			reply.put("response", "error");
 			reply.put("errorMessage", "missing or invaild server list");
 			output.writeUTF(reply.toJSONString());
+			if (debug) {
+                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + reply.toJSONString());
+            }
 		}
 		try {
 			this.serverList.update(newServerList);
 			JSONObject reply = new JSONObject();
 	        reply.put("response", "success");
 	        output.writeUTF(reply.toJSONString());
+	        if (debug) {
+                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + reply.toJSONString());
+            }
 		} catch (NumberFormatException | ClassCastException | UnknownHostException | serverException e) {
 			JSONObject reply = new JSONObject();
 			reply.put("response", "error");
 			reply.put("errorMessage", "invaild server record");
 			output.writeUTF(reply.toJSONString());
+			if (debug) {
+                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + reply.toJSONString());
+            }
 			e.printStackTrace();
 		}
     }
@@ -141,7 +159,9 @@ public class Connection implements Runnable {
                 JSONObject response = new JSONObject();
                 response.put("response", "success");
                 output.writeUTF(response.toJSONString());
-                
+                if (debug) {
+                    System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + response.toJSONString());
+                }
                 int result_cnt = 0;
                 
                 //get results from other servers first if relay == true
@@ -176,19 +196,29 @@ public class Connection implements Runnable {
                 
                 //send each resource to client
                 for (Resource res: results.getResList()){
-                    output.writeUTF(this.Resource2JSONObject(res).toJSONString());
+                    JSONObject resource_temp = this.Resource2JSONObject(res); 
+                    output.writeUTF(resource_temp.toJSONString());
+                    if (debug) {
+                        System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + resource_temp.toJSONString());
+                    }
                 }
                 
                 //Send number of results found to server
                 JSONObject result_size = new JSONObject();
                 result_size.put("resultSize", result_cnt);
                 output.writeUTF(result_size.toJSONString());
+                if (debug) {
+                    System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + result_size.toJSONString());
+                }
                 
             } catch (Exception e) { //invalid resourceTemplate
                 JSONObject inv_res = new JSONObject();
                 inv_res.put("response", "error");
                 inv_res.put("errorMessage", "invalid resourceTemplate");
                 output.writeUTF(inv_res.toJSONString());
+                if (debug) {
+                    System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + inv_res.toJSONString());
+                }
             }            
         } else {
             // Missing resource template error - send to client
@@ -196,6 +226,9 @@ public class Connection implements Runnable {
             error.put("response", "error");
             error.put("errorMessage", "missing resourceTemplate");
             output.writeUTF(error.toJSONString());
+            if (debug) {
+                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + error.toJSONString());
+            }
         }      
     }
 
@@ -267,7 +300,7 @@ public class Connection implements Runnable {
             //send request
             output.writeUTF(command.toJSONString());
             if (debug) {
-                System.out.println("[SENT]: " + command);
+                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + command.toJSONString());
             }
             output.flush();
                         
@@ -275,6 +308,9 @@ public class Connection implements Runnable {
                 if(input.available() > 0) {
                     //get results and store in results list
                     JSONObject temp_response = (JSONObject) parser.parse(input.readUTF());
+                    if (debug) {
+                        System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - RECEIVED: " + temp_response);
+                    }
                     if (temp_response.containsKey("uri")) {
                         Resource temp_res = this.JSONObj2Resource(temp_response);
                         prop_results.addResource(temp_res);
@@ -323,11 +359,17 @@ public class Connection implements Runnable {
 			JSONObject reply = new JSONObject();
 			reply.put("response", "success");
 			output.writeUTF(reply.toJSONString());
+			if (debug) {
+                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + reply.toJSONString());
+            }
 		} catch(ParseException | ClassCastException e) {
 			JSONObject reply = new JSONObject();
 			reply.put("response", "error");
 			reply.put("errorMessage", "missing resource and/or secret");
 			output.writeUTF(reply.toJSONString());
+			if (debug) {
+                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + reply.toJSONString());
+            }
 		} catch(serverException e) {
 			JSONObject reply = new JSONObject();
 			reply.put("response", "error");
@@ -337,6 +379,9 @@ public class Connection implements Runnable {
 				reply.put("errorMessage", e.toString());
 			}
 			output.writeUTF(reply.toJSONString());
+			if (debug) {
+                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + reply.toJSONString());
+            }
 		}
     }
 
@@ -366,16 +411,25 @@ public class Connection implements Runnable {
 			JSONObject reply = new JSONObject();
 			reply.put("response", "success");
 			output.writeUTF(reply.toJSONString());
+			if (debug) {
+                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + reply.toJSONString());
+            }
 		} catch(ParseException | ClassCastException e) {
 			JSONObject reply = new JSONObject();
 			reply.put("response", "error");
 			reply.put("errorMessage", "missing resource");
 			output.writeUTF(reply.toJSONString());
+			if (debug) {
+                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + reply.toJSONString());
+            }
 		} catch(serverException e) {
 			JSONObject reply = new JSONObject();
 			reply.put("response", "error");
 			reply.put("errorMessage", e.toString());
 			output.writeUTF(reply.toJSONString());
+			if (debug) {
+                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + reply.toJSONString());
+            }
 		}
 	}
 	
@@ -396,16 +450,25 @@ public class Connection implements Runnable {
 			JSONObject reply = new JSONObject();
 			reply.put("response", "success");
 			output.writeUTF(reply.toJSONString());
+			if (debug) {
+                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + reply.toJSONString());
+            }
 		} catch(ParseException | ClassCastException e) {
 			JSONObject reply = new JSONObject();
 			reply.put("response", "error");
 			reply.put("errorMessage", "missing resource");
 			output.writeUTF(reply.toJSONString());
+			if (debug) {
+                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + reply.toJSONString());
+            }
 		} catch(serverException e) {
 			JSONObject reply = new JSONObject();
 			reply.put("response", "error");
 			reply.put("errorMessage", e.toString());
 			output.writeUTF(reply.toJSONString());
+			if (debug) {
+                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + reply.toJSONString());
+            }
 		}
 	}
 	
@@ -427,6 +490,11 @@ public class Connection implements Runnable {
 				reply.put("response", "error");
 				reply.put("errorMessage", "no match resource");
 				output.writeUTF(reply.toJSONString());
+				if (debug) {
+	                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + reply.toJSONString());
+	            }
+				
+				//TODO Deal with this 'return'?
 				return;
 			}
 		
@@ -434,15 +502,21 @@ public class Connection implements Runnable {
 			URI uri = match.getUri();
 			File f = new File(uri.getHost() + uri.getPath());
 			if(f.exists()) {
-				JSONObject reponse = new JSONObject();
-				reponse.put("response", "success");
-				output.writeUTF(reponse.toJSONString());
+				JSONObject response = new JSONObject();
+				response.put("response", "success");
+				output.writeUTF(response.toJSONString());
+				if (debug) {
+	                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + response.toJSONString());
+	            }
 			
 				RandomAccessFile byteFile = new RandomAccessFile(f, "r");
 			
 				JSONObject resource = Resource2JSONObject(match);
 				resource.put("resourceSize", byteFile.length());
 				output.writeUTF(resource.toJSONString());
+				if (debug) {
+	                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + resource.toJSONString());
+	            }
 			
 				byte[] sendingBuffer = new byte[1024*1024];
 				int num;
@@ -454,12 +528,18 @@ public class Connection implements Runnable {
 				JSONObject resultFile = new JSONObject();
 				resultFile.put("resultSize", 1);
 				output.writeUTF(resultFile.toJSONString());
+				if (debug) {
+	                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + resultFile.toJSONString());
+	            }
 			}
 		} catch (ParseException | ClassCastException e) {
 			JSONObject reply = new JSONObject();
 			reply.put("response", "error");
 			reply.put("errorMessage", "missing resourceTemplate");
 			output.writeUTF(reply.toJSONString());
+			if (debug) {
+                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + reply.toJSONString());
+            }
 		} catch (serverException e) {
 			JSONObject reply = new JSONObject();
 			reply.put("response", "error");
@@ -469,6 +549,9 @@ public class Connection implements Runnable {
 				reply.put("errorMessage", e.toString());
 			}
 			output.writeUTF(reply.toJSONString());
+			if (debug) {
+                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + reply.toJSONString());
+            }
 		} catch (Exception e){
 		    e.printStackTrace();
 		}

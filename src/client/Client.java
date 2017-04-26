@@ -13,6 +13,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.RandomAccessFile;
 import java.net.Socket;
+import java.sql.Timestamp;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -56,7 +57,7 @@ class Client {
     private static Boolean debug = false;
     
     public static void main(String[] args) {
-        System.out.println("Client has started.");
+        System.out.println("\n" + new Timestamp(System.currentTimeMillis()) + " - [INFO] - Starting the EZShare Client\n"); 
 
         //Parse input arguments
         Options initOptions = new Options();
@@ -173,14 +174,17 @@ class Client {
             
             //send request
             output.writeUTF(request);
-            if (debug) {
-                System.out.println("[SENT]: " + request);
-            }
             output.flush();
+            if (debug) {
+                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + request);
+            }
                         
             while(true) {
             	if(input.available() > 0) {
-            		System.out.println(input.readUTF());
+            	    String recv = input.readUTF();
+            		if (debug) {
+                        System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - RECEIVED: " + recv);
+                    }
             	}
             	if ((System.currentTimeMillis() - startTime) > NUM_SEC*1000){
             		break;
@@ -261,6 +265,9 @@ class Client {
             
             //send request
             output.writeUTF(command.toJSONString());
+            if (debug) {
+                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + command);
+            }
             System.out.println("request sent");
             output.flush();
             
@@ -269,6 +276,9 @@ class Client {
             while(true) {
             	if(input.available() > 0) {
             		String result = input.readUTF();
+            		if (debug) {
+                        System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - RECEIVED: " + result);
+                    }
             		JSONObject reply = (JSONObject) JSONparser.parse(result);
             		//the first reply: response
             		if(reply.containsKey("response")) {

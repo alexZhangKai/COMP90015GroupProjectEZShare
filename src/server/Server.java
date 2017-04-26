@@ -15,7 +15,6 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.sql.Timestamp;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Timer;
@@ -124,7 +123,7 @@ public class Server extends TimerTask {
                 
                 connections_cnt++;
                 if (debug) {
-                    System.out.println("Client " + connections_cnt + " requesting connection.");
+                    System.out.println(new Timestamp(System.currentTimeMillis()) + " - [CONN] - Client #" + connections_cnt + ": " + clientIP + " has connected.");
                 }
                 //Create, and start, a new thread that processes incoming connections
                 executor.submit(new Connection(cmd, connections_cnt, client, resourceList, serverList));
@@ -153,7 +152,7 @@ public class Server extends TimerTask {
 	            command.put("serverList", serverList.getServerList());
 	            output.writeUTF(command.toJSONString());
 	            if (debug) {
-                    System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT:\n" + command.toJSONString());
+                    System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + command.toJSONString());
                 }
 	            output.flush();
 	            
