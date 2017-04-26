@@ -172,7 +172,7 @@ public class Server extends TimerTask {
 	            	if(input.available() > 0) {
 	            		String recv_response = input.readUTF();
 	            		if (debug) {
-	                        System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - RECEIVED:\n" + recv_response);
+	                        System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - RECEIVED: " + recv_response);
 	                    }
 	            	}
 	            	if ((System.currentTimeMillis() - startTime) > 5*1000){
