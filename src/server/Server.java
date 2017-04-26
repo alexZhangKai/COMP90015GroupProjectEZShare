@@ -12,6 +12,7 @@ package server;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.net.ConnectException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.sql.Timestamp;
@@ -34,19 +35,21 @@ import org.json.simple.JSONObject;
 
 public class Server extends TimerTask {
 
+    private static long connectionIntervalLimit = 1*1000;   //milliseconds
+    private static long exchangeIntervalLimit = 10*60;   //seconds
     private static final int MAX_THREADS = 2;
+    private static final int SOCKET_TIMEOUT_MS = 2*1000;    //ms
+    
     private static int connections_cnt = 0;
     private static int port;
     private static ResourceList resourceList = new ResourceList();
     private static ServerList serverList = new ServerList();
     private static HashMap<String, Long> clientIPList = new HashMap<String, Long>();
-    private static long connectionIntervalLimit = 1*1000;
-    private static long exchangeIntervalLimit = 10*60;
     private static String hostname;
     private static String secret;
     private static Boolean debug = false;
-    
     private static final Map<String, Boolean> argOptions;
+    
     static{
         argOptions = new HashMap<>();
         argOptions.put("advertisedhostname", true);
@@ -71,7 +74,8 @@ public class Server extends TimerTask {
         try {
             cmd = parser.parse(options, args);
         } catch (ParseException e) {
-            e.printStackTrace();
+            System.out.println("Please provide correct options.");
+            System.exit(0);
         }
         
         if (cmd.hasOption("port") && cmd.hasOption("secret") && cmd.hasOption("advertisedhostname")) {
@@ -144,10 +148,14 @@ public class Server extends TimerTask {
 	    System.out.println("\n"+new Timestamp(System.currentTimeMillis())+" - [INFO] - started Exchanger\n");
 	    
 		if(serverList.getLength() > 0) {
+		    
 			JSONObject receiver = serverList.select();
 			String ip = (String) receiver.get("hostname");
-			int port = Integer.parseInt((String)receiver.get("port"));
+			int port = Integer.parseInt(receiver.get("port").toString());
+			
 			try(Socket soc = new Socket(ip, port)){
+			    soc.setSoTimeout(SOCKET_TIMEOUT_MS);
+			    
 				DataInputStream input = new DataInputStream(soc.getInputStream());
 	            DataOutputStream output = new DataOutputStream(soc.getOutputStream());
 	            long startTime = System.currentTimeMillis();
@@ -171,32 +179,22 @@ public class Server extends TimerTask {
 	            	if(input.available() > 0) {
 	            		String recv_response = input.readUTF();
 	            		if (debug) {
-	                        System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - RECEIVED:\n" + recv_response);
+	                        System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - RECEIVED: " + recv_response);
 	                    }
 	            	}
-	            	if ((System.currentTimeMillis() - startTime) > 5*1000){
+	            	if ((System.currentTimeMillis() - startTime) > SOCKET_TIMEOUT_MS){
+	            	    soc.close();
 	            		break;
 	            	}
 	            }
-			} catch (IOException e) {
+			} catch (ConnectException e) {
+                System.out.println(new Timestamp(System.currentTimeMillis())+" - [ERROR] - Connection timed out.");
+                serverList.remove(receiver);
+            } 
+			catch (IOException e) {
+				System.out.println(new Timestamp(System.currentTimeMillis())+" - [ERROR] - IO Exception occurred.");
 				serverList.remove(receiver);
-				e.printStackTrace();
 			}
 		}		
 	}
-	
-	/*
-	 * don't use this method or we have to make the clientIPList synchronised
-	private void updateClientIPList() {
-	    //TODO Update client IP list method not used - needs to be implemented?
-		Iterator<Entry<String, Long>> it = clientIPList.entrySet().iterator();
-	    while (it.hasNext()) {
-	        Map.Entry pair = (Map.Entry)it.next();
-	        if((System.currentTimeMillis() - (long)pair.getValue()) > intervalLimit) {
-	        	clientIPList.remove(pair.getKey());
-	        }
-	        it.remove(); // avoids a ConcurrentModificationException
-	    }
-	}
-	*/
 }

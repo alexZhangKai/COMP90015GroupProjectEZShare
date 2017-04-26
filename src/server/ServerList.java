@@ -13,40 +13,47 @@ public class ServerList {
 	@SuppressWarnings("unchecked")
 	public synchronized void update(JSONArray newList, String hostname, int hostport) 
 			throws ClassCastException, UnknownHostException, NumberFormatException, serverException {
-			JSONObject host = new JSONObject();
-			host.put("hostname", hostname);
-			host.put("port", hostport);
 		for(Object newEle : newList) {
 			JSONObject newServer = (JSONObject) newEle;
 			
 			//Check validation
-			InetAddress.getByName((String) newServer.get("hostname"));
-			int port = Integer.parseInt((String)newServer.get("port"));
-			if(port < 0 || port > 65535) {
-				throw new serverException("invaild server record");
+			String newHostname = (String) newServer.get("hostname");
+			InetAddress.getByName(newHostname);
+			int newPort = Integer.parseInt(newServer.get("port").toString());
+			
+			if(newPort < 0 || newPort > 65535) {
+				throw new serverException("invalid server record");
 			}
 			
 			boolean add = true;
-			if(host.equals(newEle)) add = false;
+			if(newHostname.equals(hostname) && newPort == hostport){
+			    add = false;
+			}
 			
 			for(Object oldEle : serverList) {
 				JSONObject oldServer = (JSONObject) oldEle;
-				if(oldServer.equals(newServer)) add = false;
+				String oldHostname = (String) oldServer.get("hostname");
+	            int oldPort = Integer.parseInt(oldServer.get("port").toString());
+	            
+				if(newHostname.equals(oldHostname) && newPort == oldPort){
+	                add = false;
+	            }
 			}
 			if(add) serverList.add(newServer);
 		}		
 	}
 	
 	public JSONObject select() {
-		if(serverList.size() > 0) {
+	    if(serverList.size() > 0) {
 			int random = ThreadLocalRandom.current().nextInt(0, serverList.size());
-			return (JSONObject) serverList.get(random);
+			JSONObject randomServer = (JSONObject) serverList.get(random);
+			return randomServer;
 		}
 		return null;
 	}
 	
 	public JSONArray getServerList() {
-		if(serverList.size() > 0) return serverList;
+		if(serverList.size() > 0) return (JSONArray) serverList.clone();
 		return null;
 	}
 	

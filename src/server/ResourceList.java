@@ -76,7 +76,6 @@ public class ResourceList {
 		return resourceList.size();
 	}
 	
-	//TODO Move the method that uses this in here! Stop exposing members outside. [used in Query]
 	public ArrayList<Resource> getResList(){
 	    return this.resourceList;
 	}

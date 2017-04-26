@@ -90,8 +90,10 @@ public class Connection implements Runnable {
                     System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + reply.toJSONString());
                 }
 			}	
+			
 		} catch (IOException e) {
-      e.printStackTrace();
+		    e.printStackTrace();
+		    
 		} catch (ParseException | ClassCastException e) {
 			JSONObject reply = new JSONObject();
 			reply.put("response", "error");
@@ -107,40 +109,155 @@ public class Connection implements Runnable {
 			}
 		}		
 	}
-
+	
 	@SuppressWarnings("unchecked")
-	private void exchange(JSONObject client_request, DataOutputStream output) throws IOException {
-		JSONArray newServerList = new JSONArray();
-		try{
-			JSONParser parser = new JSONParser();
-			newServerList = (JSONArray) parser.parse(client_request.get("serverList").toString());
-		} catch (ClassCastException | ParseException e) {
-			JSONObject reply = new JSONObject();
-			reply.put("response", "error");
-			reply.put("errorMessage", "missing or invaild server list");
-			output.writeUTF(reply.toJSONString());
-			if (debug) {
+    private void publish(JSONObject client_req, DataOutputStream output) throws IOException {
+        JSONParser parser = new JSONParser();
+        try{
+            //throw class cast exception for missing resource
+            JSONObject resourceJSON = (JSONObject) parser.parse(client_req.get("resource").toString());
+            
+            //throw server exception invalid resource
+            Resource resource = JSONObj2Resource(resourceJSON);
+            
+            URI uri = resource.getUri();
+            //check if URI is provided
+            if(uri.toString().equals("")) throw new serverException("invalid resource");
+            
+            //check if URI is a URL
+            boolean isWeb = "http".equalsIgnoreCase(uri.getScheme())
+                    || "https".equalsIgnoreCase(uri.getScheme());
+            if(!isWeb) throw new serverException("invalid resource");
+            
+            //throw cannot publish resource
+            resourceList.addResource(resource);
+            
+            //create a reply
+            JSONObject reply = new JSONObject();
+            reply.put("response", "success");
+            output.writeUTF(reply.toJSONString());
+            if (debug) {
                 System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + reply.toJSONString());
             }
-		}
-		try {
-			this.serverList.update(newServerList, hostname, port);
-			JSONObject reply = new JSONObject();
-	        reply.put("response", "success");
-	        output.writeUTF(reply.toJSONString());
-	        if (debug) {
+            
+        } catch(ParseException | ClassCastException e) {
+            JSONObject reply = new JSONObject();
+            reply.put("response", "error");
+            reply.put("errorMessage", "missing resource");
+            output.writeUTF(reply.toJSONString());
+            if (debug) {
                 System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + reply.toJSONString());
             }
-		} catch (NumberFormatException | ClassCastException | UnknownHostException | serverException e) {
-			JSONObject reply = new JSONObject();
-			reply.put("response", "error");
-			reply.put("errorMessage", "invaild server record");
-			output.writeUTF(reply.toJSONString());
-			if (debug) {
+            
+        } catch(serverException e) {
+            JSONObject reply = new JSONObject();
+            reply.put("response", "error");
+            reply.put("errorMessage", e.toString());
+            output.writeUTF(reply.toJSONString());
+            if (debug) {
                 System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + reply.toJSONString());
             }
-			e.printStackTrace();
-		}
+        }
+    }
+	
+	@SuppressWarnings("unchecked")
+    private void remove(JSONObject client_req, DataOutputStream output) throws IOException {
+        JSONParser parser = new JSONParser();
+        try{
+            //throw class cast exception for missing resource
+            JSONObject resourceJSON = (JSONObject) parser.parse(client_req.get("resource").toString());
+            
+            //throw server exception invalid resource
+            Resource resource = JSONObj2Resource(resourceJSON);
+            
+            //throw server exception cannot remove resource
+            resourceList.removeResource(resource);
+            
+            //create a reply
+            JSONObject reply = new JSONObject();
+            reply.put("response", "success");
+            output.writeUTF(reply.toJSONString());
+            if (debug) {
+                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + reply.toJSONString());
+            }
+            
+        } catch(ParseException | ClassCastException e) {
+            JSONObject reply = new JSONObject();
+            reply.put("response", "error");
+            reply.put("errorMessage", "missing resource");
+            output.writeUTF(reply.toJSONString());
+            if (debug) {
+                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + reply.toJSONString());
+            }
+            
+        } catch(serverException e) {
+            JSONObject reply = new JSONObject();
+            reply.put("response", "error");
+            reply.put("errorMessage", e.toString());
+            output.writeUTF(reply.toJSONString());
+            if (debug) {
+                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + reply.toJSONString());
+            }
+        }
+    }
+	
+	@SuppressWarnings("unchecked")
+    private void share(JSONObject client_req, DataOutputStream output) throws IOException {
+        JSONParser parser = new JSONParser();
+        try{
+            //throw class cast exception for missing resource and\/or secret
+            JSONObject resourceJSON = (JSONObject) parser.parse(client_req.get("resource").toString());
+            if(!client_req.containsKey("secret")) throw new ClassCastException();
+            
+            //throw server exception invalid resource
+            Resource resource = JSONObj2Resource(resourceJSON);
+            
+            URI uri = resource.getUri();
+            //check if URI is provided
+            if(uri.toString().equals("")) throw new serverException("invalid resource");
+            
+            //check if URI is a file scheme
+            boolean isFile = "file".equalsIgnoreCase(uri.getScheme());
+            if(!isFile) throw new serverException("invalid resource");
+            
+            //check if the file exist
+            File f = new File(uri.getPath());
+            if(!f.exists()) throw new serverException("invalid resource");
+            
+            //check if secret is equal
+            if(!client_req.get("secret").equals(this.serverSecret)) throw new serverException("incorrect secret");
+            
+            //throw cannot publish resource
+            resourceList.addResource(resource);
+            
+            //create a reply
+            JSONObject reply = new JSONObject();
+            reply.put("response", "success");
+            output.writeUTF(reply.toJSONString());
+            if (debug) {
+                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + reply.toJSONString());
+            }
+        } catch(ParseException | ClassCastException e) {
+            JSONObject reply = new JSONObject();
+            reply.put("response", "error");
+            reply.put("errorMessage", "missing resource and/or secret");
+            output.writeUTF(reply.toJSONString());
+            if (debug) {
+                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + reply.toJSONString());
+            }
+        } catch(serverException e) {
+            JSONObject reply = new JSONObject();
+            reply.put("response", "error");
+            if(e.toString().equals("connot publish resource")) {
+                reply.put("errorMessage", "cannot share resource");
+            } else {
+                reply.put("errorMessage", e.toString());
+            }
+            output.writeUTF(reply.toJSONString());
+            if (debug) {
+                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + reply.toJSONString());
+            }
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -241,6 +358,7 @@ public class Connection implements Runnable {
         }
     }
 
+    //Compare the two tag sets. The incoming resource template's tags should be a subset of the current resource's.
     private boolean compareTags(List<String> in_res, List<String> curr_res) {
         if (in_res.size() == 0 && curr_res.size() == 0) {
             return true;
@@ -277,7 +395,6 @@ public class Connection implements Runnable {
             res.put("channel", "");
         command.put("resourceTemplate", res);
 
-        //TODO implement this as threads, instead of sequential
         //for each server from server list
         JSONArray serv_list = serverList.getServerList();
         for (int i = 0; i < serv_list.size(); i++) {
@@ -285,190 +402,49 @@ public class Connection implements Runnable {
             //Get server details
             JSONObject server = (JSONObject)serv_list.get(i);
             String hostname = (String) server.get("hostname");
-            int port = Integer.parseInt((String) server.get("port"));            
+            int port = Integer.parseInt(server.get("port").toString());            
             
             //Send QUERY command to that server
-            Socket socket = new Socket(hostname, port);
-            //Get I/O streams for connection
-            DataInputStream input = new DataInputStream(socket.getInputStream());
-            DataOutputStream output = new DataOutputStream(socket.getOutputStream());
-            
-            //record start time
-            long startTime = System.currentTimeMillis();
-            
-            //send request
-            output.writeUTF(command.toJSONString());
-            if (debug) {
-                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + command.toJSONString());
-            }
-            output.flush();
-                        
-            while(true) {
-                if(input.available() > 0) {
-                    //get results and store in results list
-                    JSONObject temp_response = (JSONObject) parser.parse(input.readUTF());
-                    if (debug) {
-                        System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - RECEIVED: " + temp_response);
+            try {
+                Socket socket = new Socket(hostname, port);
+                //Get I/O streams for connection
+                DataInputStream input = new DataInputStream(socket.getInputStream());
+                DataOutputStream output = new DataOutputStream(socket.getOutputStream());
+                
+                //record start time
+                long startTime = System.currentTimeMillis();
+                
+                //send request
+                output.writeUTF(command.toJSONString());
+                if (debug) {
+                    System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + command.toJSONString());
+                }
+                output.flush();
+                            
+                while(true) {
+                    if(input.available() > 0) {
+                        //get results and store in results list
+                        JSONObject temp_response = (JSONObject) parser.parse(input.readUTF());
+                        if (debug) {
+                            System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - RECEIVED: " + temp_response);
+                        }
+                        if (temp_response.containsKey("uri")) {
+                            Resource temp_res = this.JSONObj2Resource(temp_response);
+                            prop_results.addResource(temp_res);
+                        }
                     }
-                    if (temp_response.containsKey("uri")) {
-                        Resource temp_res = this.JSONObj2Resource(temp_response);
-                        prop_results.addResource(temp_res);
+                    if ((System.currentTimeMillis() - startTime) > NUM_SEC*1000){
+                        break;
                     }
                 }
-                if ((System.currentTimeMillis() - startTime) > NUM_SEC*1000){
-                    break;
-                }
+                socket.close();
+            } catch (ConnectException e) {
+                //If connection times out for a particular server, just move on
+                //...to the next one in the list. The Exchange is responsible for removing dud ones.
             }
-            socket.close();
         }               
         return prop_results;
     }
-
-    @SuppressWarnings("unchecked")
-    private void share(JSONObject client_req, DataOutputStream output) throws IOException {
-    	JSONParser parser = new JSONParser();
-		try{
-			//throw class cast exception for missing resource and\/or secret
-			JSONObject resourceJSON = (JSONObject) parser.parse(client_req.get("resource").toString());
-			if(!client_req.containsKey("secret")) throw new ClassCastException();
-			
-			//throw server exception invalid resource
-			Resource resource = JSONObj2Resource(resourceJSON);
-			
-			URI uri = resource.getUri();
-			//check if URI is provided
-			if(uri.toString().equals("")) throw new serverException("invalid resource");
-			
-			//check if URI is a file scheme
-			boolean isFile = "file".equalsIgnoreCase(uri.getScheme());
-			if(!isFile) throw new serverException("invalid resource");
-			
-			//check if the file exist
-			File f = new File(uri.toString());
-			if(!f.exists()) throw new serverException("invalid resource");
-			
-			//check if secret is equal
-			if(!client_req.get("secret").equals(this.serverSecret)) throw new serverException("incorrect secret");
-			
-			//throw cannot publish resource
-			resourceList.addResource(resource);
-			
-			//create a reply
-			JSONObject reply = new JSONObject();
-			reply.put("response", "success");
-			output.writeUTF(reply.toJSONString());
-			if (debug) {
-                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + reply.toJSONString());
-            }
-		} catch(ParseException | ClassCastException e) {
-			JSONObject reply = new JSONObject();
-			reply.put("response", "error");
-			reply.put("errorMessage", "missing resource and/or secret");
-			output.writeUTF(reply.toJSONString());
-			if (debug) {
-                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + reply.toJSONString());
-            }
-		} catch(serverException e) {
-			JSONObject reply = new JSONObject();
-			reply.put("response", "error");
-			if(e.toString().equals("connot publish resource")) {
-				reply.put("errorMessage", "cannot share resource");
-			} else {
-				reply.put("errorMessage", e.toString());
-			}
-			output.writeUTF(reply.toJSONString());
-			if (debug) {
-                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + reply.toJSONString());
-            }
-		}
-    }
-
-    @SuppressWarnings("unchecked")
-    private void publish(JSONObject client_req, DataOutputStream output) throws IOException {
-    	JSONParser parser = new JSONParser();
-		try{
-			//throw class cast exception for missing resource
-			JSONObject resourceJSON = (JSONObject) parser.parse(client_req.get("resource").toString());
-			
-			//throw server exception invalid resource
-			Resource resource = JSONObj2Resource(resourceJSON);
-			
-			URI uri = resource.getUri();
-			//check if URI is provided
-			if(uri.toString().equals("")) throw new serverException("invalid resource");
-			
-			//check if URI is a URL
-			boolean isWeb = "http".equalsIgnoreCase(uri.getScheme())
-				    || "https".equalsIgnoreCase(uri.getScheme());
-			if(!isWeb) throw new serverException("invalid resource");
-			
-			//throw cannot publish resource
-			resourceList.addResource(resource);
-			
-			//create a reply
-			JSONObject reply = new JSONObject();
-			reply.put("response", "success");
-			output.writeUTF(reply.toJSONString());
-			if (debug) {
-                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + reply.toJSONString());
-            }
-		} catch(ParseException | ClassCastException e) {
-			JSONObject reply = new JSONObject();
-			reply.put("response", "error");
-			reply.put("errorMessage", "missing resource");
-			output.writeUTF(reply.toJSONString());
-			if (debug) {
-                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + reply.toJSONString());
-            }
-		} catch(serverException e) {
-			JSONObject reply = new JSONObject();
-			reply.put("response", "error");
-			reply.put("errorMessage", e.toString());
-			output.writeUTF(reply.toJSONString());
-			if (debug) {
-                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + reply.toJSONString());
-            }
-		}
-	}
-	
-	@SuppressWarnings("unchecked")
-    private void remove(JSONObject client_req, DataOutputStream output) throws IOException {
-		JSONParser parser = new JSONParser();
-		try{
-			//throw class cast exception for missing resource
-			JSONObject resourceJSON = (JSONObject) parser.parse(client_req.get("resource").toString());
-			
-			//throw server exception invalid resource
-			Resource resource = JSONObj2Resource(resourceJSON);
-			
-			//throw server exception cannot remove resource
-			resourceList.removeResource(resource);
-			
-			//create a reply
-			JSONObject reply = new JSONObject();
-			reply.put("response", "success");
-			output.writeUTF(reply.toJSONString());
-			if (debug) {
-                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + reply.toJSONString());
-            }
-		} catch(ParseException | ClassCastException e) {
-			JSONObject reply = new JSONObject();
-			reply.put("response", "error");
-			reply.put("errorMessage", "missing resource");
-			output.writeUTF(reply.toJSONString());
-			if (debug) {
-                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + reply.toJSONString());
-            }
-		} catch(serverException e) {
-			JSONObject reply = new JSONObject();
-			reply.put("response", "error");
-			reply.put("errorMessage", e.toString());
-			output.writeUTF(reply.toJSONString());
-			if (debug) {
-                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + reply.toJSONString());
-            }
-		}
-	}
 	
 	@SuppressWarnings("unchecked")
     private void fetch(JSONObject client_req, DataOutputStream output) throws IOException{
@@ -487,7 +463,7 @@ public class Connection implements Runnable {
 		
 			//Use a known URI, need to check the file afterward ? 
 			URI uri = match.getUri();
-			File f = new File(uri.getHost() + uri.getPath());
+			File f = new File(uri.getPath());
 			if(f.exists()) {
 				JSONObject response = new JSONObject();
 				response.put("response", "success");
@@ -519,6 +495,7 @@ public class Connection implements Runnable {
 	                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + resultFile.toJSONString());
 	            }
 			}
+			
 		} catch (ParseException | ClassCastException e) {
 			JSONObject reply = new JSONObject();
 			reply.put("response", "error");
@@ -527,6 +504,7 @@ public class Connection implements Runnable {
 			if (debug) {
                 System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + reply.toJSONString());
             }
+			
 		} catch (serverException e) {
 			JSONObject reply = new JSONObject();
 			reply.put("response", "error");
@@ -539,10 +517,44 @@ public class Connection implements Runnable {
 			if (debug) {
                 System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + reply.toJSONString());
             }
-		} catch (Exception e){
-		    e.printStackTrace();
-		}
+			
+		} 
 	}
+
+    @SuppressWarnings("unchecked")
+    private void exchange(JSONObject client_request, DataOutputStream output) throws IOException {
+        JSONArray newServerList = new JSONArray();
+        try{
+            JSONParser parser = new JSONParser();
+            newServerList = (JSONArray) parser.parse(client_request.get("serverList").toString());
+        } catch (ClassCastException | ParseException e) {
+            JSONObject reply = new JSONObject();
+            reply.put("response", "error");
+            reply.put("errorMessage", "missing or invaild server list");
+            output.writeUTF(reply.toJSONString());
+            if (debug) {
+                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + reply.toJSONString());
+            }
+        }
+        try {
+            this.serverList.update(newServerList, hostname, port);
+            JSONObject reply = new JSONObject();
+            reply.put("response", "success");
+            output.writeUTF(reply.toJSONString());
+            if (debug) {
+                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + reply.toJSONString());
+            }
+            
+        } catch (NumberFormatException | ClassCastException | UnknownHostException | serverException e) {
+            JSONObject reply = new JSONObject();
+            reply.put("response", "error");
+            reply.put("errorMessage", "invaild server record");
+            output.writeUTF(reply.toJSONString());
+            if (debug) {
+                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + reply.toJSONString());
+            }
+        }
+    }
 	
 	private Resource JSONObj2Resource(JSONObject resource) throws serverException {
 		//handle default value here
@@ -564,7 +576,7 @@ public class Connection implements Runnable {
 		    }
 		}
 		
-		String uri_s = resource.containsKey("uri") ? (resource.get("name") == null ? "" : (String) resource.get("uri")) : "";
+		String uri_s = resource.containsKey("uri") ? (resource.get("name") == null ? "" : resource.get("uri").toString()) : "";
 		if (uri_s.contains("\\0")) {
 			throw new serverException("Invalid resource");
 		}
@@ -574,7 +586,7 @@ public class Connection implements Runnable {
 			uri = new URI(uri_s);
 		}
 		catch (URISyntaxException e) {
-			throw new serverException("Invalid resrouce");
+			throw new serverException("Invalid resource");
 		}
 		
 		String Channel = resource.containsKey("channel") ? (resource.get("name") == null ? "" : (String) resource.get("channel")) : "";
