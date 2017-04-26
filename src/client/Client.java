@@ -89,7 +89,7 @@ class Client {
             Client.PublishCmd(initCmd);
         } else if (initCmd.hasOption("remove")) {
             Client.RemoveCmd(initCmd);
-        } else if (initCmd.hasOption("share") && initCmd.hasOption("secret")) {
+        } else if (initCmd.hasOption("share")) {
             Client.ShareCmd(initCmd);
         } else if (initCmd.hasOption("query")) {
             Client.QueryCmd(initCmd);

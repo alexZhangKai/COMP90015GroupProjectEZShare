@@ -221,7 +221,7 @@ public class Connection implements Runnable {
             if(!isFile) throw new serverException("invalid resource");
             
             //check if the file exist
-            File f = new File(uri.toString());
+            File f = new File(uri.getHost() + uri.getPath());
             if(!f.exists()) throw new serverException("invalid resource");
             
             //check if secret is equal
@@ -402,7 +402,7 @@ public class Connection implements Runnable {
             //Get server details
             JSONObject server = (JSONObject)serv_list.get(i);
             String hostname = (String) server.get("hostname");
-            int port = Integer.parseInt((String) server.get("port"));            
+            int port = Integer.parseInt(server.get("port").toString());            
             
             //Send QUERY command to that server
             try {
@@ -576,7 +576,7 @@ public class Connection implements Runnable {
 		    }
 		}
 		
-		String uri_s = resource.containsKey("uri") ? (resource.get("name") == null ? "" : (String) resource.get("uri")) : "";
+		String uri_s = resource.containsKey("uri") ? (resource.get("name") == null ? "" : resource.get("uri").toString()) : "";
 		if (uri_s.contains("\\0")) {
 			throw new serverException("Invalid resource");
 		}
@@ -586,7 +586,7 @@ public class Connection implements Runnable {
 			uri = new URI(uri_s);
 		}
 		catch (URISyntaxException e) {
-			throw new serverException("Invalid resrouce");
+			throw new serverException("Invalid resource");
 		}
 		
 		String Channel = resource.containsKey("channel") ? (resource.get("name") == null ? "" : (String) resource.get("channel")) : "";
