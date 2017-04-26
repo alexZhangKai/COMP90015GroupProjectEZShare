@@ -133,7 +133,7 @@ class Client {
     		servers.add(ele);
     	}
     	command.put("command", "EXCHANGE");
-    	command.put("serverList", servers.toJSONString());
+    	command.put("serverList", servers);
     	generalReply(command.toJSONString());
     }
     

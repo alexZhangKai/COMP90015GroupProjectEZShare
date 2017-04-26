@@ -21,7 +21,7 @@ public class ServerList {
 			
 			//Check validation
 			InetAddress.getByName((String) newServer.get("hostname"));
-			int port = Integer.parseInt((String)newServer.get("port"));
+			int port = Integer.parseInt(newServer.get("port").toString());
 			if(port < 0 || port > 65535) {
 				throw new serverException("invaild server record");
 			}

@@ -40,8 +40,8 @@ public class Server extends TimerTask {
     private static ResourceList resourceList = new ResourceList();
     private static ServerList serverList = new ServerList();
     private static HashMap<String, Long> clientIPList = new HashMap<String, Long>();
-    private static long connectionIntervalLimit = 1*1000;
-    private static long exchangeIntervalLimit = 10*60;
+    private static long connectionIntervalLimit = 1*1000;   //milliseconds
+    private static long exchangeIntervalLimit = 1*60;   //seconds
     private static String hostname;
     private static String secret;
     private static Boolean debug = false;
