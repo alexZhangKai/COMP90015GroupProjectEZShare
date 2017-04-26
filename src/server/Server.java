@@ -14,6 +14,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Timer;
@@ -30,6 +31,7 @@ import org.apache.commons.cli.ParseException;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
+
 public class Server extends TimerTask {
 
     private static final int MAX_THREADS = 2;
@@ -41,6 +43,7 @@ public class Server extends TimerTask {
     private static long intervalLimit = 1*1000;
     private static String hostname;
     private static String secret;
+    private static Boolean debug = false;
     
     private static final Map<String, Boolean> argOptions;
     static{
@@ -78,24 +81,27 @@ public class Server extends TimerTask {
             System.out.println("Please provide enough options.");
             System.exit(0);
         }
+        if (cmd.hasOption("debug")) {
+            Server.debug = true;
+            System.out.println(new Timestamp(System.currentTimeMillis()) + " - [INFO] - setting debug on\n");
+        }
         
-       System.out.println("[INFO] - Starting the EZShare Server\n" + 
-                           "[INFO] - using secret: " + Server.secret + "\n" +
-                           "[INFO] - using advertised hostname: " + Server.hostname + "\n" + 
-                           "[INFO] - bound to port " + Server.port);
+       System.out.println(new Timestamp(System.currentTimeMillis()) + " - [INFO] - Starting the EZShare Server\n"); 
+       System.out.println(new Timestamp(System.currentTimeMillis()) + " - [INFO] - using secret: " + Server.secret + "\n");
+       System.out.println(new Timestamp(System.currentTimeMillis()) + " - [INFO] - using advertised hostname: " + Server.hostname + "\n");
         
         //factory for server sockets
         ServerSocketFactory factory = ServerSocketFactory.getDefault();
         
         //Create server socket that auto-closes, and bind to port
         try (ServerSocket server = factory.createServerSocket(port)){
-            System.out.println("Waiting for client connection...");
+            System.out.println(new Timestamp(System.currentTimeMillis()) + " - [INFO] - bound to port " + Server.port);
              
             //Set exchange schema
             //TODO comment exchange for test
             TimerTask timerTask = new Server();
     		Timer timer = new Timer(true);
-    		timer.scheduleAtFixedRate(timerTask, 1, 10*60*1000);
+//    		timer.scheduleAtFixedRate(timerTask, 1, 10*60*1000);
             
             //Keep listening for connections and use a thread pool with 2 threads
             ExecutorService executor = Executors.newFixedThreadPool(MAX_THREADS);
@@ -108,15 +114,18 @@ public class Server extends TimerTask {
                 	if((System.currentTimeMillis() - clientIPList.get(clientIP)) > intervalLimit) {
                 		clientIPList.put(clientIP, System.currentTimeMillis());
                 	} else {
-                		throw new serverException("break connection interval limit");
+                		System.out.println(new Timestamp(System.currentTimeMillis())+" - [WARNING] - "+clientIP+" tried connect too soon.\n");
+                		client.close();
+                		continue;
                 	}
                 } else {
                 	clientIPList.put(clientIP, System.currentTimeMillis());
                 }
                 
                 connections_cnt++;
-                System.out.println("Client " + connections_cnt + " requesting connection.");
-                
+                if (debug) {
+                    System.out.println(new Timestamp(System.currentTimeMillis()) + " - [CONN] - Client #" + connections_cnt + ": " + clientIP + " has connected.");
+                }
                 //Create, and start, a new thread that processes incoming connections
                 executor.submit(new Connection(cmd, connections_cnt, client, resourceList, serverList));
             }
@@ -129,8 +138,7 @@ public class Server extends TimerTask {
 	@SuppressWarnings("unchecked")
 	@Override
 	public void run() {
-	    
-	    System.out.println("\n[INFO] - started Exchanger\n");
+	    System.out.println("\n"+new Timestamp(System.currentTimeMillis())+" - [INFO] - started Exchanger\n");
 	    
 		if(serverList.getLength() > 0) {
 			JSONObject receiver = serverList.select();
@@ -151,11 +159,17 @@ public class Server extends TimerTask {
 	            
 	            command.put("serverList", serverArr);
 	            output.writeUTF(command.toJSONString());
+	            if (debug) {
+                    System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + command.toJSONString());
+                }
 	            output.flush();
 	            
 	            while(true) {
 	            	if(input.available() > 0) {
-	            		System.out.println(input.readUTF());
+	            		String recv_response = input.readUTF();
+	            		if (debug) {
+	                        System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - RECEIVED:\n" + recv_response);
+	                    }
 	            	}
 	            	if ((System.currentTimeMillis() - startTime) > 5*1000){
 	            		break;
