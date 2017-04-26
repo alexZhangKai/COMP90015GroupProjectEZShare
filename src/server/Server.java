@@ -12,6 +12,7 @@ package server;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.net.ConnectException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.sql.Timestamp;
@@ -47,6 +48,7 @@ public class Server extends TimerTask {
     private static Boolean debug = false;
     
     private static final Map<String, Boolean> argOptions;
+    private static final int SOCKET_TIMEOUT_MS = 2*1000;    //ms
     static{
         argOptions = new HashMap<>();
         argOptions.put("advertisedhostname", true);
@@ -150,6 +152,8 @@ public class Server extends TimerTask {
 			int port = Integer.parseInt(receiver.get("port").toString());
 			
 			try(Socket soc = new Socket(ip, port)){
+			    soc.setSoTimeout(SOCKET_TIMEOUT_MS);
+			    
 				DataInputStream input = new DataInputStream(soc.getInputStream());
 	            DataOutputStream output = new DataOutputStream(soc.getOutputStream());
 	            long startTime = System.currentTimeMillis();
@@ -176,30 +180,19 @@ public class Server extends TimerTask {
 	                        System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - RECEIVED: " + recv_response);
 	                    }
 	            	}
-	            	if ((System.currentTimeMillis() - startTime) > 5*1000){
+	            	if ((System.currentTimeMillis() - startTime) > SOCKET_TIMEOUT_MS){
 	            	    soc.close();
 	            		break;
 	            	}
 	            }
-			} catch (IOException e) {
+			} catch (ConnectException e) {
+                System.out.println(new Timestamp(System.currentTimeMillis())+" - [ERROR] - Connection timed out.");
+                serverList.remove(receiver);
+            } 
+			catch (IOException e) {
 				serverList.remove(receiver);
 				e.printStackTrace();
 			}
 		}		
 	}
-	
-	/*
-	 * don't use this method or we have to make the clientIPList synchronised
-	private void updateClientIPList() {
-	    //TODO Update client IP list method not used - needs to be implemented?
-		Iterator<Entry<String, Long>> it = clientIPList.entrySet().iterator();
-	    while (it.hasNext()) {
-	        Map.Entry pair = (Map.Entry)it.next();
-	        if((System.currentTimeMillis() - (long)pair.getValue()) > intervalLimit) {
-	        	clientIPList.remove(pair.getKey());
-	        }
-	        it.remove(); // avoids a ConcurrentModificationException
-	    }
-	}
-	*/
 }

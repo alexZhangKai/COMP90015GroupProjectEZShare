@@ -277,7 +277,6 @@ public class Connection implements Runnable {
             res.put("channel", "");
         command.put("resourceTemplate", res);
 
-        //TODO implement this as threads, instead of sequential
         //for each server from server list
         JSONArray serv_list = serverList.getServerList();
         for (int i = 0; i < serv_list.size(); i++) {
@@ -288,38 +287,43 @@ public class Connection implements Runnable {
             int port = Integer.parseInt((String) server.get("port"));            
             
             //Send QUERY command to that server
-            Socket socket = new Socket(hostname, port);
-            //Get I/O streams for connection
-            DataInputStream input = new DataInputStream(socket.getInputStream());
-            DataOutputStream output = new DataOutputStream(socket.getOutputStream());
-            
-            //record start time
-            long startTime = System.currentTimeMillis();
-            
-            //send request
-            output.writeUTF(command.toJSONString());
-            if (debug) {
-                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + command.toJSONString());
-            }
-            output.flush();
-                        
-            while(true) {
-                if(input.available() > 0) {
-                    //get results and store in results list
-                    JSONObject temp_response = (JSONObject) parser.parse(input.readUTF());
-                    if (debug) {
-                        System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - RECEIVED: " + temp_response);
+            try {
+                Socket socket = new Socket(hostname, port);
+                //Get I/O streams for connection
+                DataInputStream input = new DataInputStream(socket.getInputStream());
+                DataOutputStream output = new DataOutputStream(socket.getOutputStream());
+                
+                //record start time
+                long startTime = System.currentTimeMillis();
+                
+                //send request
+                output.writeUTF(command.toJSONString());
+                if (debug) {
+                    System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + command.toJSONString());
+                }
+                output.flush();
+                            
+                while(true) {
+                    if(input.available() > 0) {
+                        //get results and store in results list
+                        JSONObject temp_response = (JSONObject) parser.parse(input.readUTF());
+                        if (debug) {
+                            System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - RECEIVED: " + temp_response);
+                        }
+                        if (temp_response.containsKey("uri")) {
+                            Resource temp_res = this.JSONObj2Resource(temp_response);
+                            prop_results.addResource(temp_res);
+                        }
                     }
-                    if (temp_response.containsKey("uri")) {
-                        Resource temp_res = this.JSONObj2Resource(temp_response);
-                        prop_results.addResource(temp_res);
+                    if ((System.currentTimeMillis() - startTime) > NUM_SEC*1000){
+                        break;
                     }
                 }
-                if ((System.currentTimeMillis() - startTime) > NUM_SEC*1000){
-                    break;
-                }
+                socket.close();
+            } catch (ConnectException e) {
+                //If connection times out for a particular server, just move on
+                //...to the next one in the list. The Exchange is responsible for removing dud ones.
             }
-            socket.close();
         }               
         return prop_results;
     }
