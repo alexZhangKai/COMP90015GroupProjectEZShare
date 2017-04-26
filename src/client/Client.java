@@ -153,8 +153,6 @@ class Client {
     @SuppressWarnings("unchecked")
     private static void QueryCmd(CommandLine initCmd) {
         JSONObject command = new JSONObject();
-        
-        //TODO Likely cannot use this method to construct the template as it may NOT have a URI
         JSONObject resourceTemplate = createResJSONObj(initCmd);
         
         command.put("command", "QUERY");

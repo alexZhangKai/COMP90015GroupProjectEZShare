@@ -130,7 +130,7 @@ public class Server extends TimerTask {
                     System.out.println(new Timestamp(System.currentTimeMillis()) + " - [CONN] - Client #" + connections_cnt + ": " + clientIP + " has connected.");
                 }
                 //Create, and start, a new thread that processes incoming connections
-                executor.submit(new Connection(cmd, connections_cnt, client, resourceList, serverList));
+                executor.submit(new Connection(cmd, client, resourceList, serverList));
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -186,7 +186,7 @@ public class Server extends TimerTask {
 	}
 	
 	/*
-	 * don't use this method or we have to make the clientIPList synchronized
+	 * don't use this method or we have to make the clientIPList synchronised
 	private void updateClientIPList() {
 	    //TODO Update client IP list method not used - needs to be implemented?
 		Iterator<Entry<String, Long>> it = clientIPList.entrySet().iterator();

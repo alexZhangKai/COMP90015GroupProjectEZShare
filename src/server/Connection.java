@@ -28,8 +28,7 @@ import org.json.simple.parser.ParseException;
 
 public class Connection implements Runnable {
 	private static final int NUM_SEC = 2;
-    private int id;
-	private Socket client;
+    private Socket client;
 	private ResourceList resourceList;
 	private ServerList serverList;
 	private String serverSecret;
@@ -37,8 +36,7 @@ public class Connection implements Runnable {
 	private String hostname;
 	private int port;
 	
-	public Connection(CommandLine cmd, int id, Socket client, ResourceList resourceList, ServerList serverList) {
-		this.id = id;
+	public Connection(CommandLine cmd, Socket client, ResourceList resourceList, ServerList serverList) {
 		this.client = client;
 		this.resourceList = resourceList;
 		this.serverList = serverList;
@@ -174,7 +172,7 @@ public class Connection implements Runnable {
                         result_cnt += results.getSize();
                     }
                 }
-                //TODO something wrong with the conditions, there is no channel value in relay, cannot match
+
                 //Query current resource list for resources that match the template
                 for (Resource curr_res: resourceList.getResList()){
                     if (in_res.getChannel().equals(curr_res.getChannel()) && 
@@ -317,7 +315,6 @@ public class Connection implements Runnable {
                         prop_results.addResource(temp_res);
                     }
                 }
-                //TODO set it large when debug like 100 times more
                 if ((System.currentTimeMillis() - startTime) > NUM_SEC*1000){
                     break;
                 }
@@ -343,13 +340,12 @@ public class Connection implements Runnable {
 			if(uri.toString().equals("")) throw new serverException("invalid resource");
 			
 			//check if URI is a file scheme
-//			boolean isFile = "file".equalsIgnoreCase(uri.getScheme());
-//			if(!isFile) throw new serverException("invalid resource");
+			boolean isFile = "file".equalsIgnoreCase(uri.getScheme());
+			if(!isFile) throw new serverException("invalid resource");
 			
 			//check if the file exist
-			//TODO uncomment when submit
-			//File f = new File(uri.toString());
-			//if(!f.exists()) throw new serverException("invalid resource");
+			File f = new File(uri.toString());
+			if(!f.exists()) throw new serverException("invalid resource");
 			
 			//check if secret is equal
 			if(!client_req.get("secret").equals(this.serverSecret)) throw new serverException("incorrect secret");
@@ -606,7 +602,6 @@ public class Connection implements Runnable {
         for (String tag: resource.getTags()){
             tag_list.add(tag);
         }
-        //TODO should value for "tags" be a string or is a JSONArray okay?
         jobj.put("tags", tag_list);
         
         jobj.put("uri", resource.getUri().toString());
