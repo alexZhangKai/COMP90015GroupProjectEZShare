@@ -221,7 +221,7 @@ public class Connection implements Runnable {
             if(!isFile) throw new serverException("invalid resource");
             
             //check if the file exist
-            File f = new File(uri.getHost() + uri.getPath());
+            File f = new File(uri.getPath());
             if(!f.exists()) throw new serverException("invalid resource");
             
             //check if secret is equal
@@ -463,7 +463,7 @@ public class Connection implements Runnable {
 		
 			//Use a known URI, need to check the file afterward ? 
 			URI uri = match.getUri();
-			File f = new File(uri.getHost() + uri.getPath());
+			File f = new File(uri.getPath());
 			if(f.exists()) {
 				JSONObject response = new JSONObject();
 				response.put("response", "success");
