@@ -13,6 +13,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.RandomAccessFile;
 import java.net.Socket;
+import java.net.URI;
 import java.sql.Timestamp;
 
 import org.apache.commons.cli.CommandLine;
@@ -197,7 +198,9 @@ class Client {
             			Long fileSizeRemaining = (Long) reply.get("resourceSize");            			
             			int chunkSize = setChunkSize(fileSizeRemaining);            			
             			byte[] receiveBuffer = new byte[chunkSize];
-            			String fileName = "clientFile/test.png";
+            			String uri = (String)reply.get("uri");
+            			//this only works for Linux
+            			String fileName = uri.substring( uri.lastIndexOf('/')+1, uri.length() );
             			RandomAccessFile downloadingFile = new RandomAccessFile(fileName, "rw");
 
             			//remaining file size
