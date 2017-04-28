@@ -38,11 +38,9 @@ public class Server extends TimerTask {
 
     //minimum time between each successive connection from the same IP address
     private static long connectionIntervalLimit = 1*1000;   //milliseconds
-
+    private static long exchangeIntervalLimit = 10*60;   //seconds
     //max number of concurrent client connections allowed
     private static final int MAX_THREADS = 10;
-    
-    private static long exchangeIntervalLimit = 10*60;   //seconds
     private static final int SOCKET_TIMEOUT_MS = 2*1000;    //ms
     
     private static int connections_cnt = 0;
@@ -63,11 +61,7 @@ public class Server extends TimerTask {
         argOptions.put("debug", false);
     }
     
-    public static void main(String[] args) {
-        
-        //Randomly generate a string sequence and remove hyphens
-        Server.secret = UUID.randomUUID().toString().replaceAll("-", "");
-        
+    public static void main(String[] args) {        
         //Parse CMD options
         Options options = new Options();
         for (String option: argOptions.keySet()){
@@ -98,10 +92,17 @@ public class Server extends TimerTask {
                     + " - [INFO] - setting debug on\n");
         }
         if (cmd.hasOption("exchangeinterval")) {
-            Server.exchangeIntervalLimit = Long.parseLong(cmd.getOptionValue("exchangeinterval"));
+            Server.exchangeIntervalLimit = 
+                    Long.parseLong(cmd.getOptionValue("exchangeinterval"));
+        }
+        if (cmd.hasOption("connectionintervallimit")) {
+            Server.connectionIntervalLimit = 
+                    Integer.parseInt(cmd.getOptionValue("connectionintervallimit"));
         }
         if (cmd.hasOption("secret")) {
             Server.secret = cmd.getOptionValue("secret");
+        } else {    //Randomly generate a string sequence and remove hyphens
+            Server.secret = UUID.randomUUID().toString().replaceAll("-", "");
         }
         
         System.out.println(new Timestamp(System.currentTimeMillis()) 
