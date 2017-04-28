@@ -13,7 +13,6 @@ package server;
 
 import java.io.*;
 import java.net.*;
-import java.rmi.ServerException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -36,11 +35,11 @@ public class Connection implements Runnable {
 	private String hostname;
 	private int port;
 	
-	public Connection(CommandLine cmd, Socket client, ResourceList resourceList, ServerList serverList) {
+	public Connection(CommandLine cmd, Socket client, ResourceList resourceList, ServerList serverList, String secret) {
 		this.client = client;
 		this.resourceList = resourceList;
 		this.serverList = serverList;
-		this.serverSecret = cmd.getOptionValue("secret");
+		this.serverSecret = secret;
 		this.hostname = cmd.getOptionValue("advertisedhostname");
 		this.debug = cmd.hasOption("debug") ? true : false;
 		this.port = Integer.parseInt(cmd.getOptionValue("port"));
@@ -459,7 +458,7 @@ public class Connection implements Runnable {
 			Resource match = resourceList.queryForChannelURI(resourceTemplate);
 		
 			//handle no match error
-			if(match == null) throw new ServerException("no match resource");
+			if(match == null) throw new serverException("no match resource");
 		
 			//Use a known URI, need to check the file afterward ? 
 			URI uri = match.getUri();

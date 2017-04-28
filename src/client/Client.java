@@ -13,7 +13,6 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.RandomAccessFile;
 import java.net.Socket;
-import java.net.URI;
 import java.sql.Timestamp;
 
 import org.apache.commons.cli.CommandLine;
@@ -193,9 +192,10 @@ class Client {
             		//the first reply: response
             		if(reply.containsKey("response")) {
             			if(reply.get("response").equals("success")) {
-            				continue;
+            				System.out.println("Success");
+            			    continue;
             			} else {
-            				System.out.println(reply.toJSONString());
+            				System.out.println("Error occurred.");
             				break;
             			}
             		}
