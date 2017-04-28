@@ -456,6 +456,7 @@ public class Connection implements Runnable {
 				//Because it's read in 'read' mode, it is thread-safe
 				RandomAccessFile byteFile = new RandomAccessFile(f, "r");
 				JSONObject resource = Resource2JSONObject(match);
+				resource.put("owner", "*"); //protect privacy of owner
 				
 				//send file size
 				resource.put("resourceSize", byteFile.length());
