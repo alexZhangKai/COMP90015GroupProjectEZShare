@@ -13,8 +13,10 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.ConnectException;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.Map;
@@ -78,13 +80,26 @@ public class Server extends TimerTask {
             System.exit(0);
         }
         
-        if (cmd.hasOption("port") && cmd.hasOption("advertisedhostname")) {
+        if (cmd.hasOption("port")) {
             port = Integer.parseInt(cmd.getOptionValue("port"));
-            Server.hostname = cmd.getOptionValue("advertisedhostname");
         } else {
-            System.out.println("Please provide enough options.");
+            System.out.println("Please provide port number.");
             PrintValidArgumentList();
             System.exit(0);
+        }
+        
+        //self assign a hostname
+        if (cmd.hasOption("advertisedhostname")) {
+            Server.hostname = cmd.getOptionValue("advertisedhostname");
+        } else {
+            try {
+                Server.hostname = InetAddress.getLocalHost().getHostName();
+            } catch (UnknownHostException e) {
+                System.out.println(new Timestamp(System.currentTimeMillis()) 
+                        + " - [ERROR] - Could not determine hostname of self."
+                        + " Please provide via options.");
+                PrintValidArgumentList();
+            }
         }
         if (cmd.hasOption("debug")) {
             Server.debug = true;
