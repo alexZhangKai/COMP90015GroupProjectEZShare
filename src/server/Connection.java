@@ -124,7 +124,8 @@ public class Connection implements Runnable {
             
             //check if URI is a URL
             boolean isWeb = "http".equalsIgnoreCase(uri.getScheme())
-                    || "https".equalsIgnoreCase(uri.getScheme());
+                    || "https".equalsIgnoreCase(uri.getScheme())
+                    || "ftp".equalsIgnoreCase(uri.getScheme());
             if (!isWeb) throw new serverException("invalid resource");
             
             //throws cannot publish resource if any publishing rules are broken
@@ -255,7 +256,7 @@ public class Connection implements Runnable {
         } catch (serverException e) {
             JSONObject reply = new JSONObject();
             reply.put("response", "error");
-            if(e.toString().equals("connot publish resource")) {
+            if(e.toString().equals("cannot publish resource")) {
                 reply.put("errorMessage", "cannot share resource");
             } else {
                 reply.put("errorMessage", e.toString());

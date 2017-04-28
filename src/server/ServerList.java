@@ -31,6 +31,9 @@ public class ServerList {
 			JSONObject newServerJSON = (JSONObject) newServerObject;
 			
 			//Validate
+			if (!newServerJSON.containsKey("hostname") || !newServerJSON.containsKey("port")) {
+                throw new serverException("missing resourceTemplate");
+            }
 			String newHostname = (String) newServerJSON.get("hostname");
 			InetAddress.getByName(newHostname);
 			int newPort = Integer.parseInt(newServerJSON.get("port").toString());
