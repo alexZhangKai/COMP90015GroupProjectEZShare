@@ -43,7 +43,6 @@ public class Server extends TimerTask {
     
     private static int connections_cnt = 0;
     private static int port;
-    private static ResourceList resourceList = new ResourceList();
     private static ServerList serverList = new ServerList();
     private static HashMap<String, Long> clientIPList = new HashMap<String, Long>();
     private static String hostname;

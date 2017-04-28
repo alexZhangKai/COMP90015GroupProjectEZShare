@@ -28,7 +28,6 @@ import org.json.simple.parser.ParseException;
 public class Connection implements Runnable {
 	private static final int NUM_SEC = 2;
     private Socket client;
-//	private ResourceList resourceList;
 	private ServerList serverList;
 	private String serverSecret;
 	private Boolean debug;
@@ -279,23 +278,27 @@ public class Connection implements Runnable {
                 int result_cnt = 0;
                 
                 //get results from other servers first if relay == true
-                ResourceList results = new ResourceList();
+                List<Resource> relay_res_results = new ArrayList<Resource>();
                 if (client_request.containsKey("relay")) {
                     //only propagate when there are other servers in the list
                     if ((Boolean)client_request.get("relay") && serverList.getLength() > 0) {
-                        results = propagateQuery(client_request);
-                        result_cnt += results.getSize();
+                        relay_res_results = propagateQuery(client_request);
+                        result_cnt += relay_res_results.size();
                     }
                 }
 
                 //store local query results here
-                List<Resource> local_res_results = new ArrayList<Resource>();
+                List<Resource> res_results = new ArrayList<Resource>();                
+                res_results = ResourceList.queryForQuerying(in_res);
+                result_cnt += res_results.size();
                 
-                local_res_results = ResourceList.queryForQuerying(in_res);
-                result_cnt += local_res_results.size();
+                //combine the two results
+                for (Resource res: relay_res_results){
+                    res_results.add(res);
+                }
 
                 //send each resource to client
-                for (Resource res: local_res_results){
+                for (Resource res: res_results){
                     JSONObject resource_temp = this.Resource2JSONObject(res); 
                     output.writeUTF(resource_temp.toJSONString());
                     if (debug) {
@@ -333,8 +336,8 @@ public class Connection implements Runnable {
     }
 
     @SuppressWarnings("unchecked")
-    private ResourceList propagateQuery(JSONObject client_request) throws ParseException, UnknownHostException, IOException, serverException {
-        ResourceList prop_results = new ResourceList();
+    private List<Resource> propagateQuery(JSONObject client_request) throws ParseException, UnknownHostException, IOException, serverException {
+        List<Resource> prop_results = new ArrayList<>();
         
         //construct the right query
         JSONParser parser = new JSONParser();
@@ -383,7 +386,7 @@ public class Connection implements Runnable {
                         }
                         if (temp_response.containsKey("uri")) {
                             Resource temp_res = this.JSONObj2Resource(temp_response);
-                            prop_results.addResource(temp_res);
+                            prop_results.add(temp_res);
                         }
                     }
                     if ((System.currentTimeMillis() - startTime) > NUM_SEC*1000){
