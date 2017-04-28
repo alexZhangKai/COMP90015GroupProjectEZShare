@@ -86,16 +86,22 @@ class Client {
         
         //Decipher command and call respective method
         if (initCmd.hasOption("publish")) {
+            System.out.println(new Timestamp(System.currentTimeMillis()) + " - [FINE] - publishing to " + ip + ":" + port);
             Client.PublishCmd(initCmd);
         } else if (initCmd.hasOption("remove")) {
+            System.out.println(new Timestamp(System.currentTimeMillis()) + " - [FINE] - removing from " + ip + ":" + port);
             Client.RemoveCmd(initCmd);
         } else if (initCmd.hasOption("share")) {
+            System.out.println(new Timestamp(System.currentTimeMillis()) + " - [FINE] - sharing at " + ip + ":" + port);
             Client.ShareCmd(initCmd);
         } else if (initCmd.hasOption("query")) {
+            System.out.println(new Timestamp(System.currentTimeMillis()) + " - [FINE] - querying " + ip + ":" + port);
             Client.QueryCmd(initCmd);
         } else if (initCmd.hasOption("fetch")) {
+            System.out.println(new Timestamp(System.currentTimeMillis()) + " - [FINE] - fetching from " + ip + ":" + port);
             Client.FetchCmd(initCmd);
         } else if (initCmd.hasOption("exchange") && initCmd.hasOption("servers")) {
+            System.out.println(new Timestamp(System.currentTimeMillis()) + " - [FINE] - exchanging with " + ip + ":" + port);
             Client.ExchangeCmd(initCmd);
         } else if (initCmd.hasOption("invalidComm")) {
             Client.InvalidCmd();
