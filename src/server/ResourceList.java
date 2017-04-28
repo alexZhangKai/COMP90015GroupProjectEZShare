@@ -5,7 +5,9 @@
  * Group: AALT
  * 
  * This class keeps track of which resources exist on this server.
- * It implements the basic list functions [add, remove, indexOf] using 'synchronised' for concurrency protection.
+ * It implements the basic list functions:
+ *      [add, remove, indexOf, querying for various applications] 
+ *      using 'synchronised' for concurrency protection.
  */
 
 package server;
@@ -17,21 +19,28 @@ import java.util.List;
 public class ResourceList {
 	private static ArrayList<Resource> resourceList = new ArrayList<Resource>();
   
+	//thread safe because of "synchronized"
 	public synchronized static void addResource(Resource newResource) throws serverException {
 		//Check if resource already exists with same channel and URI
 		Resource match = queryForChannelURI(newResource);
 		
+		//if no existing resource channel and URI matches... 
 		if(match == null) {
+		    //...then add it.
 			if(!resourceList.add(newResource)) {
 				throw new serverException("cannot publish resource");
 			}
-		} else {
+			//otherwise...
+		} else { 
+		    //...check if their owners are the same. 
+		        //If not, deny publish request.
 			if(!match.getOwner().equals(newResource.getOwner()))
 				throw new serverException("cannot publish resource");
-			if(!resourceList.remove(match) || !resourceList.add(newResource)) 
+			
+			   //...else: remove existing resource with that PK and add new one 
+			if (!resourceList.remove(match) || !resourceList.add(newResource)) 
 				throw new serverException("cannot publish resource");
 		}
-		
 	}
 	
 	public synchronized static void removeResource(Resource oldResource) throws serverException {
@@ -43,39 +52,38 @@ public class ResourceList {
 		}
 	}
 
+	//Check if resource exists based on it Primary Key (URI, owner, channel)
 	public static Resource queryForPK(Resource re) {
 	    //Check if resource already exists...
-		int len = resourceList.size();
-		if(len == 0) return null;
+	    Resource match = null;
 		
-		for(int i = 0; i < len; i++) {    //...return its position in the list if it does.
+		for(int i = 0; i < resourceList.size(); i++) {    //...return its position in the list if it does.
 			if(re.getChannel().equals(resourceList.get(i).getChannel()) && 
 				re.getOwner().equals(resourceList.get(i).getOwner()) &&
 				re.getUri().equals(resourceList.get(i).getUri())) {
 				return resourceList.get(i);
 			}
 		}
-		return null;
+		return match;
 	}
 	
 	public static Resource queryForChannelURI(Resource re) {
-		int len = resourceList.size();
-		if(len == 0) return null;
-		
-		for(int i = 0; i < len; i++) {    //...return its position in the list if it does.
+	    Resource match = null;
+	    
+		for(int i = 0; i < resourceList.size(); i++) {    //...return its position in the list if it does.
 			if((re.getChannel().equals(resourceList.get(i).getChannel())) &&
 					(re.getUri().equals(resourceList.get(i).getUri()))) {
 				return resourceList.get(i);
 			}
 		}
-		return null;
+		return match;
 	}
 	
 	public int getSize() {
 		return resourceList.size();
 	}
-	
 
+	//Return a list of resources that match the 'query' criteria
     public synchronized static List<Resource> queryForQuerying(Resource in_res) {
         List<Resource> results = new ArrayList<>();
         
@@ -98,7 +106,6 @@ public class ResourceList {
                 results.add(tempRes);
             }
         }
-        
         return results;
     }
     
@@ -132,5 +139,4 @@ public class ResourceList {
         }
         return true;
     }
-
 }
