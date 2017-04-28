@@ -34,6 +34,7 @@ public class Resource {
 		this.EZserver = EZserver;
 	}
 	
+	//copying a resource
 	public Resource(Resource res){
 	    this(res.getName(), res.getDescription(), res.getTags(), res.getUri(), 
 	            res.getChannel(), res.getOwner(), res.getEZserver());
@@ -95,14 +96,3 @@ public class Resource {
         return EZserver;
     }
 }
-
-//Maybe better to auto-generate the equals method based on primary key attributes of this class, see equals method above
-//public static boolean compare(Resource re1, Resource re2) {
-//  if (re1.getChannel().equals(re2.getChannel()) && 
-//          re1.getOwner().equals(re2.getOwner()) && 
-//          re1.getURI().equals(re2.getURI())) 
-//  {
-//      return true;
-//  }
-//  return false;
-//}

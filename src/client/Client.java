@@ -30,7 +30,11 @@ import java.util.Map;
 class Client {
     private static String ip;
     private static int port;
-    private static final int NUM_SEC = 3;
+    private static Boolean debug = false; //verbose output   
+    private static final int TIMEOUT_SECS = 3;
+    private static Boolean relay = false; //For disabling relay to other servers when querying
+    private static int CHUNK_SIZE = 1024*1024;
+    
     private static final Map<String, Boolean> argOptions;
     static{
         argOptions = new HashMap<>();
@@ -51,15 +55,16 @@ class Client {
         argOptions.put("share", false);
         argOptions.put("tags", true);
         argOptions.put("uri", true);
+        
+        //for testing a misbehaving client
         argOptions.put("invalidComm", false);
         argOptions.put("missingComm", false);
     }
-    private static Boolean debug = false;
     
     public static void main(String[] args) {
         System.out.println("\n" + new Timestamp(System.currentTimeMillis()) + " - [INFO] - Starting the EZShare Client\n"); 
 
-        //Parse input arguments
+        //possible input arguments
         Options initOptions = new Options();
         for (String option: argOptions.keySet()){
             initOptions.addOption(option, argOptions.get(option), option);
@@ -67,59 +72,74 @@ class Client {
         CommandLineParser parser = new DefaultParser();
         CommandLine initCmd = null;
         
+        //Parse provided input arguments
         try {
             initCmd = parser.parse(initOptions, args);
         } catch (ParseException e) {
-            System.out.println("Please provide correct options.");
+            System.out.println("Argument parsing error.");
+            PrintValidArgumentList();
             System.exit(0);
         }
+        
+        //Port and IP (aka "host") should be provided
         if (initCmd.hasOption("port") && initCmd.hasOption("host")) {
             port = Integer.parseInt(initCmd.getOptionValue("port"));
             ip = initCmd.getOptionValue("host");
         } else {
             System.out.println("Please provide IP and PORT options");
+            PrintValidArgumentList();
             System.exit(0);
         }
-        if (initCmd.hasOption("debug")) {
-            debug = true;
-        }
+        
+        debug = initCmd.hasOption("debug");
+        relay = !initCmd.hasOption("norelay");
         
         //Decipher command and call respective method
         if (initCmd.hasOption("publish")) {
-            System.out.println(new Timestamp(System.currentTimeMillis()) + " - [FINE] - publishing to " + ip + ":" + port);
+            System.out.println(new Timestamp(System.currentTimeMillis()) 
+                    + " - [FINE] - publishing to " + ip + ":" + port);
             Client.PublishCmd(initCmd);
         } else if (initCmd.hasOption("remove")) {
-            System.out.println(new Timestamp(System.currentTimeMillis()) + " - [FINE] - removing from " + ip + ":" + port);
+            System.out.println(new Timestamp(System.currentTimeMillis()) 
+                    + " - [FINE] - removing from " + ip + ":" + port);
             Client.RemoveCmd(initCmd);
         } else if (initCmd.hasOption("share")) {
-            System.out.println(new Timestamp(System.currentTimeMillis()) + " - [FINE] - sharing at " + ip + ":" + port);
+            System.out.println(new Timestamp(System.currentTimeMillis()) 
+                    + " - [FINE] - sharing at " + ip + ":" + port);
             Client.ShareCmd(initCmd);
         } else if (initCmd.hasOption("query")) {
-            System.out.println(new Timestamp(System.currentTimeMillis()) + " - [FINE] - querying " + ip + ":" + port);
+            System.out.println(new Timestamp(System.currentTimeMillis()) 
+                    + " - [FINE] - querying " + ip + ":" + port);
             Client.QueryCmd(initCmd);
         } else if (initCmd.hasOption("fetch")) {
-            System.out.println(new Timestamp(System.currentTimeMillis()) + " - [FINE] - fetching from " + ip + ":" + port);
+            System.out.println(new Timestamp(System.currentTimeMillis()) 
+                    + " - [FINE] - fetching from " + ip + ":" + port);
             Client.FetchCmd(initCmd);
         } else if (initCmd.hasOption("exchange") && initCmd.hasOption("servers")) {
-            System.out.println(new Timestamp(System.currentTimeMillis()) + " - [FINE] - exchanging with " + ip + ":" + port);
+            System.out.println(new Timestamp(System.currentTimeMillis()) 
+                    + " - [FINE] - exchanging with " + ip + ":" + port);
             Client.ExchangeCmd(initCmd);
         } else if (initCmd.hasOption("invalidComm")) {
             Client.InvalidCmd();
         } else if (initCmd.hasOption("missingComm")) {
             Client.MissingCmd();
         } else {
-            System.out.println("Please use valid arguments.");
+            System.out.println("Command not supplied.");
+            PrintValidArgumentList();;
         }
     }    
-    
+
     @SuppressWarnings("unchecked")  
     public static void PublishCmd(CommandLine initCmd) {
-        //Create a JSONObject command and send it to server
         JSONObject command = new JSONObject();
+        
+        //Create JSON object from resource info provided in CMD
         JSONObject resource = createResJSONObj(initCmd);
 
         command.put("command", "PUBLISH");
         command.put("resource", resource);
+        
+        //send off to server
         generalReply(command.toJSONString());
     }
     
@@ -135,11 +155,12 @@ class Client {
     
     @SuppressWarnings("unchecked")
     public static void ShareCmd(CommandLine initCmd) {
-        //Create a JSONObject command and send it to server
         JSONObject command = new JSONObject();
         JSONObject resource = createResJSONObj(initCmd);
 
+        //Sharing a file on server requires secret value
         String secret = initCmd.getOptionValue("secret");
+        
         command.put("command", "SHARE");
         command.put("secret", secret);
         command.put("resource", resource);
@@ -152,7 +173,7 @@ class Client {
         JSONObject resourceTemplate = createResJSONObj(initCmd);
         
         command.put("command", "QUERY");
-        command.put("relay", true);
+        command.put("relay", relay);
         command.put("resourceTemplate", resourceTemplate);
         generalReply(command.toJSONString());
     }
@@ -176,7 +197,8 @@ class Client {
             //send request
             output.writeUTF(command.toJSONString());
             if (debug) {
-                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + command);
+                System.out.println(new Timestamp(System.currentTimeMillis())
+                        +" - [DEBUG] - SENT: " + command);
             }
             output.flush();
             
@@ -186,7 +208,8 @@ class Client {
             	if(input.available() > 0) {
             		String result = input.readUTF();
             		if (debug) {
-                        System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - RECEIVED: " + result);
+                        System.out.println(new Timestamp(System.currentTimeMillis())
+                                +" - [DEBUG] - RECEIVED: " + result);
                     }
             		JSONObject reply = (JSONObject) JSONparser.parse(result);
             		//the first reply: response
@@ -205,13 +228,18 @@ class Client {
             			int chunkSize = setChunkSize(fileSizeRemaining);            			
             			byte[] receiveBuffer = new byte[chunkSize];
             			String uri = (String)reply.get("uri");
-            			//this only works for Linux
-            			String fileName = uri.substring( uri.lastIndexOf('/')+1, uri.length() );
+            			
+            			//this only works for Linux?
+            			String fileName = uri.substring(uri.lastIndexOf('/') + 1, uri.length());
             			RandomAccessFile downloadingFile = new RandomAccessFile(fileName, "rw");
 
             			//remaining file size
             			int num;
-                        System.out.println(new Timestamp(System.currentTimeMillis())+" - [INFO] - Downloading file of size: " + fileSizeRemaining + " bytes.");
+                        System.out.println(new Timestamp(System.currentTimeMillis())
+                                    +" - [INFO] - Downloading file of size: " 
+                                    + fileSizeRemaining + " bytes.");
+                        
+                        //read actual file
             			while((num = input.read(receiveBuffer)) > 0) {
             				downloadingFile.write(Arrays.copyOf(receiveBuffer, num));
             				fileSizeRemaining -= num;
@@ -224,7 +252,8 @@ class Client {
             				}
             			}
             			
-            			System.out.println(new Timestamp(System.currentTimeMillis())+" - [INFO] - File downloaded.");
+            			System.out.println(new Timestamp(System.currentTimeMillis())
+            			        +" - [INFO] - File downloaded.");
             			downloadingFile.close();
             		}
             		
@@ -234,7 +263,7 @@ class Client {
             		}
             	}
             	//connection timeout
-                if((System.currentTimeMillis() - start) > NUM_SEC*1000) {
+                if((System.currentTimeMillis() - start) > TIMEOUT_SECS*1000) {
                     break;
                 }
             }
@@ -246,9 +275,10 @@ class Client {
     @SuppressWarnings("unchecked")
     private static void ExchangeCmd(CommandLine initCmd) {
         JSONObject command = new JSONObject();
-
         String[] serversArr = initCmd.getOptionValue("servers").split(",");
         JSONArray servers = new JSONArray();
+        
+        //parse servers in list and add to JSON array
         for(String server : serversArr) {
             String[] hostAndPort = server.split(":");
             JSONObject ele = new JSONObject();
@@ -262,36 +292,36 @@ class Client {
     }
     
     public static int setChunkSize(long fileSizeRemaining) {
-        int chunkSize = 1024*1024;
-        
-        if(fileSizeRemaining < chunkSize) {
-            chunkSize = (int) fileSizeRemaining;
+        if(fileSizeRemaining < CHUNK_SIZE) {
+            CHUNK_SIZE = (int) fileSizeRemaining;
         }
-        
-        return chunkSize;
+        return CHUNK_SIZE;
     }
     
     @SuppressWarnings("unchecked")
     private static void MissingCmd() {
         JSONObject jobj = new JSONObject();
-        jobj.put("uwotm8", "blah");
+        jobj.put("NoCommand", "blah");
         Client.generalReply(jobj.toString());
     }
         
     @SuppressWarnings("unchecked")
     private static void InvalidCmd() {
         JSONObject jobj = new JSONObject();
-        jobj.put("command", "blah");
+        jobj.put("command", "invalidCommand");
         Client.generalReply(jobj.toString());   
     }
     
+    //Create a JSON object from resource information given in CMD arguments 
     @SuppressWarnings("unchecked")  
     private static JSONObject createResJSONObj(CommandLine initCmd) {
         JSONObject resource = new JSONObject();
         
+        //replace non-existent values with blank string
         String uri = initCmd.hasOption("uri")? initCmd.getOptionValue("uri") : "";
         String name = initCmd.hasOption("name") ? initCmd.getOptionValue("name") : "";
         
+        //parse tags into JSON Array
         JSONArray tag_list = new JSONArray();
         if (initCmd.hasOption("tags")) {
             String[] tags_arr = initCmd.getOptionValue("tags").split(",");
@@ -301,9 +331,12 @@ class Client {
             }
         }
         
-        String description = initCmd.hasOption("description") ? initCmd.getOptionValue("description") : "";
-        String channel = initCmd.hasOption("channel") ? initCmd.getOptionValue("channel") : "";
-        String owner = initCmd.hasOption("owner") ? initCmd.getOptionValue("owner") : "";
+        String description = initCmd.hasOption("description") ? 
+                initCmd.getOptionValue("description") : "";
+        String channel = initCmd.hasOption("channel") ? 
+                initCmd.getOptionValue("channel") : "";
+        String owner = initCmd.hasOption("owner") ? 
+                initCmd.getOptionValue("owner") : "";
                 
         resource.put("name", name);            
         resource.put("tags", tag_list);
@@ -316,6 +349,7 @@ class Client {
         return resource;
     }
     
+    //Send JSON command to server
     public static void generalReply(String request) {
         try (Socket socket = new Socket(ip, port)){
             //Get I/O streams for connection
@@ -329,7 +363,8 @@ class Client {
             output.writeUTF(request);
             output.flush();
             if (debug) {
-                System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + request);
+                System.out.println(new Timestamp(System.currentTimeMillis())
+                        + " - [DEBUG] - SENT: " + request);
             }
                         
             JSONParser parser = new JSONParser();
@@ -338,7 +373,8 @@ class Client {
                     String recv = input.readUTF();
                     JSONObject reply = (JSONObject) parser.parse(recv);
                     if (debug) {
-                        System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - RECEIVED: " + recv);
+                        System.out.println(new Timestamp(System.currentTimeMillis())
+                                + " - [DEBUG] - RECEIVED: " + recv);
                     }
                     else {
                         System.out.println("Response from server: " + recv);
@@ -347,13 +383,34 @@ class Client {
                         break;
                     }
                 }
-                
-                if ((System.currentTimeMillis() - startTime) > NUM_SEC*1000){
+                if ((System.currentTimeMillis() - startTime) > TIMEOUT_SECS*1000){
                     break;
                 }
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+    
+    private static void PrintValidArgumentList() {
+        System.out.println("Valid arguments include: \n"
+                + "\t -channel <arg>    channel \n"
+                + "\t -debug            print debug information \n"
+                + "\t -description <arg> resource description \n"
+                + "\t -exchange         exchange server list with server \n"
+                + "\t -fetch            fetch resources from server \n"
+                + "\t -host <arg>       server host, a domain name or IP address \n"
+                + "\t -name <arg>       resource name \n"
+                + "\t -owner <arg>      owner \n"
+                + "\t -port <arg>       server port, an integer \n"
+                + "\t -publish          publish resource on server \n"
+                + "\t -query            query for resources from server \n"
+                + "\t -norelay          do not relay query command to other servers \n"
+                + "\t -remove           remove resource from server \n"
+                + "\t -secret <arg>     secret \n"
+                + "\t -servers <arg>    server list, host1:port1,host2:port2,... \n"
+                + "\t -share            share resource on server \n"
+                + "\t -tags <arg>       resource tags, tag1,tag2,tag3,... \n"
+                + "\t -uri <arg>        resource URI \n");
     }
 }
