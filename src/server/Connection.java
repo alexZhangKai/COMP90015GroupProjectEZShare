@@ -28,16 +28,15 @@ import org.json.simple.parser.ParseException;
 public class Connection implements Runnable {
 	private static final int NUM_SEC = 2;
     private Socket client;
-	private ResourceList resourceList;
+//	private ResourceList resourceList;
 	private ServerList serverList;
 	private String serverSecret;
 	private Boolean debug;
 	private String hostname;
 	private int port;
 	
-	public Connection(CommandLine cmd, Socket client, ResourceList resourceList, ServerList serverList, String secret) {
+	public Connection(CommandLine cmd, Socket client, ServerList serverList, String secret) {
 		this.client = client;
-		this.resourceList = resourceList;
 		this.serverList = serverList;
 		this.serverSecret = secret;
 		this.hostname = cmd.getOptionValue("advertisedhostname");
@@ -129,7 +128,7 @@ public class Connection implements Runnable {
             if(!isWeb) throw new serverException("invalid resource");
             
             //throw cannot publish resource
-            resourceList.addResource(resource);
+            ResourceList.addResource(resource);
             
             //create a reply
             JSONObject reply = new JSONObject();
@@ -170,7 +169,7 @@ public class Connection implements Runnable {
             Resource resource = JSONObj2Resource(resourceJSON);
             
             //throw server exception cannot remove resource
-            resourceList.removeResource(resource);
+            ResourceList.removeResource(resource);
             
             //create a reply
             JSONObject reply = new JSONObject();
@@ -227,7 +226,7 @@ public class Connection implements Runnable {
             if(!client_req.get("secret").equals(this.serverSecret)) throw new serverException("incorrect secret");
             
             //throw cannot publish resource
-            resourceList.addResource(resource);
+            ResourceList.addResource(resource);
             
             //create a reply
             JSONObject reply = new JSONObject();
@@ -289,28 +288,14 @@ public class Connection implements Runnable {
                     }
                 }
 
-                //Query current resource list for resources that match the template
-                for (Resource curr_res: resourceList.getResList()){
-                    if (in_res.getChannel().equals(curr_res.getChannel()) && 
-                            in_res.getOwner().equals(curr_res.getOwner()) &&
-                            compareTags(in_res.getTags(), curr_res.getTags()) &&
-                            compareUri(in_res.getUri(), curr_res.getUri()) &&
-                                (curr_res.getName().contains(in_res.getName()) ||
-                                curr_res.getDescription().contains(in_res.getDescription()))) {
-                        
-                        //Copy current resource into results list if it matches criterion
-                        Resource tempRes = new Resource(curr_res.getName(), curr_res.getDescription(), curr_res.getTags(), 
-                                curr_res.getUri(), curr_res.getChannel(), 
-                                curr_res.getOwner().equals("")? "":"*", curr_res.getEZserver());  //owner is never revealed
-
-                        //Send found resource as JSON to client
-                        results.addResource(tempRes);
-                        result_cnt++;
-                    }
-                }
+                //store local query results here
+                List<Resource> local_res_results = new ArrayList<Resource>();
                 
+                local_res_results = ResourceList.queryForQuerying(in_res);
+                result_cnt += local_res_results.size();
+
                 //send each resource to client
-                for (Resource res: results.getResList()){
+                for (Resource res: local_res_results){
                     JSONObject resource_temp = this.Resource2JSONObject(res); 
                     output.writeUTF(resource_temp.toJSONString());
                     if (debug) {
@@ -345,37 +330,6 @@ public class Connection implements Runnable {
                 System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + error.toJSONString());
             }
         }      
-    }
-
-    //Compare the two URIs for Query purposes. If the incoming URI has no host i.e. is empty, it should match all URIs
-    //...otherwise only an exact match is acceptable
-    private boolean compareUri(URI in_uri, URI curr_uri) {
-        if (in_uri.getHost() == null) {
-            return true;
-        } else {
-            return in_uri.equals(curr_uri);
-        }
-    }
-
-    //Compare the two tag sets. The incoming resource template's tags should be a subset of the current resource's.
-    private boolean compareTags(List<String> in_res, List<String> curr_res) {
-        if (in_res.size() == 0 && curr_res.size() == 0) {
-            return true;
-        }
-        else if (in_res.size() == 0 && curr_res.size() != 0){
-            return false;
-        }
-        else if (in_res.size() != 0 && curr_res.size() == 0){
-            return false;
-        }
-        else {
-            for (String tag: in_res){
-                if (!curr_res.contains(tag)) {
-                    return false;
-                }
-            }
-        }
-        return true;
     }
 
     @SuppressWarnings("unchecked")
@@ -455,7 +409,7 @@ public class Connection implements Runnable {
 			//throw server exception invalid resource
 			Resource resourceTemplate = JSONObj2Resource(resourceJSON);
 		
-			Resource match = resourceList.queryForChannelURI(resourceTemplate);
+			Resource match = ResourceList.queryForChannelURI(resourceTemplate);
 		
 			//handle no match error
 			if(match == null) throw new serverException("no match resource");
@@ -529,7 +483,7 @@ public class Connection implements Runnable {
         } catch (ClassCastException | ParseException e) {
             JSONObject reply = new JSONObject();
             reply.put("response", "error");
-            reply.put("errorMessage", "missing or invaild server list");
+            reply.put("errorMessage", "missing or invalid server list");
             output.writeUTF(reply.toJSONString());
             if (debug) {
                 System.out.println(new Timestamp(System.currentTimeMillis())+" - [DEBUG] - SENT: " + reply.toJSONString());

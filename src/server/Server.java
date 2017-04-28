@@ -139,7 +139,7 @@ public class Server extends TimerTask {
                     System.out.println(new Timestamp(System.currentTimeMillis()) + " - [CONN] - Client #" + connections_cnt + ": " + clientIP + " has connected.");
                 }
                 //Create, and start, a new thread that processes incoming connections
-                executor.submit(new Connection(cmd, client, resourceList, serverList, Server.secret));
+                executor.submit(new Connection(cmd, client, serverList, Server.secret));
             }
         } catch (Exception e) {
             e.printStackTrace();
