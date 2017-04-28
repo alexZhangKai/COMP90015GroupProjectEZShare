@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import javax.net.ServerSocketFactory;
@@ -62,6 +63,8 @@ public class Server extends TimerTask {
     
     public static void main(String[] args) {
         
+        Server.secret = UUID.randomUUID().toString().replaceAll("-", "");
+        
         //Parse CMD options
         Options options = new Options();
         for (String option: argOptions.keySet()){
@@ -78,10 +81,9 @@ public class Server extends TimerTask {
             System.exit(0);
         }
         
-        if (cmd.hasOption("port") && cmd.hasOption("secret") && cmd.hasOption("advertisedhostname")) {
+        if (cmd.hasOption("port") && cmd.hasOption("advertisedhostname")) {
             port = Integer.parseInt(cmd.getOptionValue("port"));
             Server.hostname = cmd.getOptionValue("advertisedhostname");
-            Server.secret = cmd.getOptionValue("secret");
         } else {
             System.out.println("Please provide enough options.");
             System.exit(0);
@@ -92,6 +94,9 @@ public class Server extends TimerTask {
         }
         if (cmd.hasOption("exchangeinterval")) {
             Server.exchangeIntervalLimit = Long.parseLong(cmd.getOptionValue("exchangeinterval"));
+        }
+        if (cmd.hasOption("secret")) {
+            Server.secret = cmd.getOptionValue("secret");
         }
         
        System.out.println(new Timestamp(System.currentTimeMillis()) + " - [INFO] - Starting the EZShare Server\n"); 
