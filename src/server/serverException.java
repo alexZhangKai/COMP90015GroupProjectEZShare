@@ -4,7 +4,7 @@
  * Sem 1, 2017
  * Group: AALT
  * 
- * Class that deals defines serverException and error message
+ * Class that defines serverException and error message
  */
 
 package server;
