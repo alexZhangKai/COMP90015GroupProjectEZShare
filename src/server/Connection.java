@@ -208,7 +208,7 @@ public class Connection implements Runnable {
             Resource resource = JSONObj2Resource(resourceJSON);
             
             URI uri = resource.getUri();
-            //check if URI is provided
+            //check if URI is provided and is absolute
             if(uri.toString().equals("")) throw new serverException("invalid resource");
             
             //check if URI is a file scheme
@@ -538,6 +538,7 @@ public class Connection implements Runnable {
 		URI uri;
 		try {
 			uri = new URI(uri_s);
+			if (!uri.isAbsolute()) throw new serverException("Invalid resource");
 		}
 		catch (URISyntaxException e) {
 			throw new serverException("Invalid resource");

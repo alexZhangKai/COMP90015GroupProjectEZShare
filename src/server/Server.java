@@ -4,7 +4,7 @@
  * Sem 1, 2017
  * Group: AALT
  * 
- * Server-side application; relies on Resource, ResourceList and Connection classes
+ * Server-side application; relies on Resource, ResourceList, ServerList, serverException and Connection classes
  */
 
 package server;
@@ -40,7 +40,7 @@ public class Server extends TimerTask {
     private static long connectionIntervalLimit = 1*1000;   //milliseconds
 
     //max number of concurrent client connections allowed
-    private static final int MAX_THREADS = 100;
+    private static final int MAX_THREADS = 10;
     
     private static long exchangeIntervalLimit = 10*60;   //seconds
     private static final int SOCKET_TIMEOUT_MS = 2*1000;    //ms
