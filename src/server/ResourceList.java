@@ -10,15 +10,14 @@
 
 package server;
 
+import java.net.URI;
 import java.util.ArrayList;
+import java.util.List;
 
 public class ResourceList {
-	private ArrayList<Resource> resourceList;
-	public ResourceList() {
-		this.resourceList = new ArrayList<Resource>();
-	}
+	private static ArrayList<Resource> resourceList = new ArrayList<Resource>();
   
-	public synchronized void addResource(Resource newResource) throws serverException {
+	public synchronized static void addResource(Resource newResource) throws serverException {
 		//Check if resource already exists with same channel and URI
 		Resource match = queryForChannelURI(newResource);
 		
@@ -35,7 +34,7 @@ public class ResourceList {
 		
 	}
 	
-	public synchronized void removeResource(Resource oldResource) throws serverException {
+	public synchronized static void removeResource(Resource oldResource) throws serverException {
 		Resource match = queryForPK(oldResource);
 		if(match == null) {
 			throw new serverException("cannot remove resource");
@@ -44,7 +43,7 @@ public class ResourceList {
 		}
 	}
 
-	public Resource queryForPK(Resource re) {
+	public static Resource queryForPK(Resource re) {
 	    //Check if resource already exists...
 		int len = resourceList.size();
 		if(len == 0) return null;
@@ -59,7 +58,7 @@ public class ResourceList {
 		return null;
 	}
 	
-	public Resource queryForChannelURI(Resource re) {
+	public static Resource queryForChannelURI(Resource re) {
 		int len = resourceList.size();
 		if(len == 0) return null;
 		
@@ -76,7 +75,62 @@ public class ResourceList {
 		return resourceList.size();
 	}
 	
-	public ArrayList<Resource> getResList(){
-	    return this.resourceList;
-	}
+
+    public synchronized static List<Resource> queryForQuerying(Resource in_res) {
+        List<Resource> results = new ArrayList<>();
+        
+        // Query current resource list for resources that match the template
+        for (Resource curr_res: resourceList){
+            if (in_res.getChannel().equals(curr_res.getChannel()) && 
+                    in_res.getOwner().equals(curr_res.getOwner()) &&
+                    compareTags(in_res.getTags(), curr_res.getTags()) &&
+                    compareUri(in_res.getUri(), curr_res.getUri()) &&
+                        (curr_res.getName().contains(in_res.getName()) ||
+                        curr_res.getDescription().contains(in_res.getDescription()))) 
+            {
+                
+                //Copy current resource into results list if it matches criterion
+                Resource tempRes = new Resource(curr_res.getName(), curr_res.getDescription(), curr_res.getTags(), 
+                        curr_res.getUri(), curr_res.getChannel(), 
+                        curr_res.getOwner().equals("")? "":"*", curr_res.getEZserver());  //owner is never revealed
+
+                //Send found resource as JSON to client
+                results.add(tempRes);
+            }
+        }
+        
+        return results;
+    }
+    
+    //Compare the two URIs for Query purposes. If the incoming URI has no host i.e. is empty, it should match all URIs
+    //...otherwise only an exact match is acceptable
+    private static boolean compareUri(URI in_uri, URI curr_uri) {
+        if (in_uri.getHost() == null) {
+            return true;
+        } else {
+            return in_uri.equals(curr_uri);
+        }
+    }
+
+    //Compare the two tag sets. The incoming resource template's tags should be a subset of the current resource's.
+    private static boolean compareTags(List<String> in_res, List<String> curr_res) {
+        if (in_res.size() == 0 && curr_res.size() == 0) {
+            return true;
+        }
+        else if (in_res.size() == 0 && curr_res.size() != 0){
+            return false;
+        }
+        else if (in_res.size() != 0 && curr_res.size() == 0){
+            return false;
+        }
+        else {
+            for (String tag: in_res){
+                if (!curr_res.contains(tag)) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
 }
