@@ -552,9 +552,17 @@ public class Connection implements Runnable {
 		if (Owner.contains("\\0") || Owner.contains("*")) {
 			throw new serverException("Invalid resource");
 		}
-		String EZserver = hostname+":"+port;
 		
-		return new Resource(Name, Description, tags_slist, uri, Channel, Owner, EZserver);
+		String curr_EZserver = hostname+":"+port; 
+		String EZServer = resource.containsKey("ezserver") ? 
+		        (resource.get("ezserver") == null ? 
+		                curr_EZserver : (String) resource.get("ezserver")) 
+		        : curr_EZserver;
+        if (EZServer.contains("\\0")) {
+            throw new serverException("Invalid resource");
+        }
+		
+		return new Resource(Name, Description, tags_slist, uri, Channel, Owner, EZServer);
 	}
 	
 	@SuppressWarnings("unchecked")
