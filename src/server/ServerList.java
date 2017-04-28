@@ -8,10 +8,10 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
 public class ServerList {
-	private JSONArray serverList = new JSONArray();
+	private static JSONArray serverList = new JSONArray();
 	
 	@SuppressWarnings("unchecked")
-	public synchronized void update(JSONArray newList, String hostname, int hostport) 
+	public synchronized static void update(JSONArray newList, String hostname, int hostport) 
 			throws ClassCastException, UnknownHostException, NumberFormatException, serverException {
 		for(Object newEle : newList) {
 			JSONObject newServer = (JSONObject) newEle;
@@ -43,7 +43,7 @@ public class ServerList {
 		}		
 	}
 	
-	public JSONObject select() {
+	public static synchronized JSONObject select() {
 	    if(serverList.size() > 0) {
 			int random = ThreadLocalRandom.current().nextInt(0, serverList.size());
 			JSONObject randomServer = (JSONObject) serverList.get(random);
@@ -52,16 +52,16 @@ public class ServerList {
 		return null;
 	}
 	
-	public JSONArray getServerList() {
-		if(serverList.size() > 0) return (JSONArray) serverList.clone();
-		return null;
-	}
-	
-	public int getLength() {
+	public static int getLength() {
 		return serverList.size();
 	}
 	
-	public void remove(JSONObject server) {
+	public static synchronized void remove(JSONObject server) {
 		serverList.remove(server);
 	}
+
+    public static JSONArray getCopyServerList() {
+        if(serverList.size() > 0) return (JSONArray) serverList.clone();
+        return null;
+    }
 }

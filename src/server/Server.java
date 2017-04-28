@@ -36,14 +36,18 @@ import org.json.simple.JSONObject;
 
 public class Server extends TimerTask {
 
+    //minimum time between each successive connection from the same IP address
     private static long connectionIntervalLimit = 1*1000;   //milliseconds
+
+    //max number of concurrent client connections allowed
+    private static final int MAX_THREADS = 100;
+    
     private static long exchangeIntervalLimit = 10*60;   //seconds
-    private static final int MAX_THREADS = 2;
     private static final int SOCKET_TIMEOUT_MS = 2*1000;    //ms
     
     private static int connections_cnt = 0;
     private static int port;
-    private static ServerList serverList = new ServerList();
+
     private static HashMap<String, Long> clientIPList = new HashMap<String, Long>();
     private static String hostname;
     private static String secret;
@@ -138,7 +142,7 @@ public class Server extends TimerTask {
                     System.out.println(new Timestamp(System.currentTimeMillis()) + " - [CONN] - Client #" + connections_cnt + ": " + clientIP + " has connected.");
                 }
                 //Create, and start, a new thread that processes incoming connections
-                executor.submit(new Connection(cmd, client, serverList, Server.secret));
+                executor.submit(new Connection(cmd, client, Server.secret));
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -151,9 +155,9 @@ public class Server extends TimerTask {
 	public void run() {
 	    System.out.println("\n"+new Timestamp(System.currentTimeMillis())+" - [INFO] - started Exchanger\n");
 	    
-		if(serverList.getLength() > 0) {
+		if(ServerList.getLength() > 0) {
 		    
-			JSONObject receiver = serverList.select();
+			JSONObject receiver = ServerList.select();
 			String ip = (String) receiver.get("hostname");
 			int port = Integer.parseInt(receiver.get("port").toString());
 			
@@ -166,7 +170,7 @@ public class Server extends TimerTask {
 	            JSONObject command = new JSONObject();
 	            command.put("command", "EXCHANGE");
 	            
-	            JSONArray serverArr = serverList.getServerList();
+	            JSONArray serverArr = ServerList.getCopyServerList();
 	            JSONObject host = new JSONObject();
 	            host.put("hostname", hostname);
 	            host.put("port", port);
@@ -193,11 +197,11 @@ public class Server extends TimerTask {
 	            }
 			} catch (ConnectException e) {
                 System.out.println(new Timestamp(System.currentTimeMillis())+" - [ERROR] - Connection timed out.");
-                serverList.remove(receiver);
+                ServerList.remove(receiver);
             } 
 			catch (IOException e) {
 				System.out.println(new Timestamp(System.currentTimeMillis())+" - [ERROR] - IO Exception occurred.");
-				serverList.remove(receiver);
+				ServerList.remove(receiver);
 			}
 		}		
 	}

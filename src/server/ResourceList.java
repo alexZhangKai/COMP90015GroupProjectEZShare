@@ -61,7 +61,7 @@ public class ResourceList {
 			if(re.getChannel().equals(resourceList.get(i).getChannel()) && 
 				re.getOwner().equals(resourceList.get(i).getOwner()) &&
 				re.getUri().equals(resourceList.get(i).getUri())) {
-				return resourceList.get(i);
+				match = resourceList.get(i);
 			}
 		}
 		return match;
@@ -73,7 +73,7 @@ public class ResourceList {
 		for(int i = 0; i < resourceList.size(); i++) {    //...return its position in the list if it does.
 			if((re.getChannel().equals(resourceList.get(i).getChannel())) &&
 					(re.getUri().equals(resourceList.get(i).getUri()))) {
-				return resourceList.get(i);
+				match = resourceList.get(i);
 			}
 		}
 		return match;

@@ -28,15 +28,13 @@ import org.json.simple.parser.ParseException;
 public class Connection implements Runnable {
 	private static final int NUM_SEC = 2;
     private Socket client;
-	private ServerList serverList;
 	private String serverSecret;
 	private Boolean debug;
 	private String hostname;
 	private int port;
 	
-	public Connection(CommandLine cmd, Socket client, ServerList serverList, String secret) {
+	public Connection(CommandLine cmd, Socket client, String secret) {
 		this.client = client;
-		this.serverList = serverList;
 		this.serverSecret = secret;
 		this.hostname = cmd.getOptionValue("advertisedhostname");
 		this.debug = cmd.hasOption("debug") ? true : false;
@@ -281,7 +279,7 @@ public class Connection implements Runnable {
                 List<Resource> relay_res_results = new ArrayList<Resource>();
                 if (client_request.containsKey("relay")) {
                     //only propagate when there are other servers in the list
-                    if ((Boolean)client_request.get("relay") && serverList.getLength() > 0) {
+                    if ((Boolean)client_request.get("relay") && ServerList.getLength() > 0) {
                         relay_res_results = propagateQuery(client_request);
                         result_cnt += relay_res_results.size();
                     }
@@ -352,7 +350,7 @@ public class Connection implements Runnable {
         command.put("resourceTemplate", res);
 
         //for each server from server list
-        JSONArray serv_list = serverList.getServerList();
+        JSONArray serv_list = ServerList.getCopyServerList();
         for (int i = 0; i < serv_list.size(); i++) {
 
             //Get server details
@@ -493,7 +491,7 @@ public class Connection implements Runnable {
             }
         }
         try {
-            this.serverList.update(newServerList, hostname, port);
+            ServerList.update(newServerList, hostname, port);
             JSONObject reply = new JSONObject();
             reply.put("response", "success");
             output.writeUTF(reply.toJSONString());
