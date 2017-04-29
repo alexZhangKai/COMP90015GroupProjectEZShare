@@ -571,7 +571,7 @@ public class Connection implements Runnable {
 			throw new serverException("Invalid resource");
 		}
 		String Description = resource.containsKey("description") ? 
-		        (resource.get("name") == null ? 
+		        (resource.get("description") == null ? 
 		                "" : (String) resource.get("description")) 
 		        : "";
 		        
@@ -589,7 +589,7 @@ public class Connection implements Runnable {
 		}
 		
 		String uri_s = resource.containsKey("uri") ? 
-		        (resource.get("name") == null ? 
+		        (resource.get("uri") == null ? 
 		                "" : resource.get("uri").toString()) 
 		        : "";
 		if (uri_s.contains("\\0")) {
@@ -605,7 +605,7 @@ public class Connection implements Runnable {
 		}
 		
 		String Channel = resource.containsKey("channel") ? 
-		        (resource.get("name") == null ? 
+		        (resource.get("channel") == null ? 
 		                "" : (String) resource.get("channel")) 
 		        : "";
 		if (Channel.contains("\\0")) {
@@ -613,7 +613,7 @@ public class Connection implements Runnable {
 		}
 		
 		String Owner = resource.containsKey("owner") ?
-		        (resource.get("name") == null ?
+		        (resource.get("owner") == null ?
 		                "" : (String) resource.get("owner")) 
 		        : "";
 		if (Owner.contains("\\0") || Owner.contains("*")) {
