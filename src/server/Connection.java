@@ -598,7 +598,7 @@ public class Connection implements Runnable {
 		URI uri;
 		try {
 			uri = new URI(uri_s);
-			if (!uri.isAbsolute()) throw new serverException("Invalid resource");
+			if (!uri_s.equals("") && !uri.isAbsolute()) throw new serverException("Invalid resource");
 		}
 		catch (URISyntaxException e) {
 			throw new serverException("Invalid resource");
