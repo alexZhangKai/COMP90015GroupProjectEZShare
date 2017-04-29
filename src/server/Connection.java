@@ -33,12 +33,12 @@ public class Connection implements Runnable {
 	private String hostname;
 	private int port;
 	
-	public Connection(CommandLine cmd, Socket client, String secret) {
+	public Connection(CommandLine cmd, Socket client, String secret, String hostname, int port) {
 		this.client = client;
 		this.serverSecret = secret;
-		this.hostname = cmd.getOptionValue("advertisedhostname");
+		this.hostname = hostname;
 		this.debug = cmd.hasOption("debug") ? true : false;
-		this.port = Integer.parseInt(cmd.getOptionValue("port"));
+		this.port = port;
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -383,6 +383,7 @@ public class Connection implements Runnable {
             //Send QUERY command to that server
             try {
                 Socket socket = new Socket(hostname, port);
+                socket.setSoTimeout(SECS_TO_TIMEOUT);
                 //Get I/O streams for connection
                 DataInputStream input = new DataInputStream(socket.getInputStream());
                 DataOutputStream output = new DataOutputStream(socket.getOutputStream());
@@ -570,7 +571,7 @@ public class Connection implements Runnable {
 			throw new serverException("Invalid resource");
 		}
 		String Description = resource.containsKey("description") ? 
-		        (resource.get("name") == null ? 
+		        (resource.get("description") == null ? 
 		                "" : (String) resource.get("description")) 
 		        : "";
 		        
@@ -588,7 +589,7 @@ public class Connection implements Runnable {
 		}
 		
 		String uri_s = resource.containsKey("uri") ? 
-		        (resource.get("name") == null ? 
+		        (resource.get("uri") == null ? 
 		                "" : resource.get("uri").toString()) 
 		        : "";
 		if (uri_s.contains("\\0")) {
@@ -597,14 +598,14 @@ public class Connection implements Runnable {
 		URI uri;
 		try {
 			uri = new URI(uri_s);
-			if (!uri.isAbsolute()) throw new serverException("Invalid resource");
+			if (!uri_s.equals("") && !uri.isAbsolute()) throw new serverException("Invalid resource");
 		}
 		catch (URISyntaxException e) {
 			throw new serverException("Invalid resource");
 		}
 		
 		String Channel = resource.containsKey("channel") ? 
-		        (resource.get("name") == null ? 
+		        (resource.get("channel") == null ? 
 		                "" : (String) resource.get("channel")) 
 		        : "";
 		if (Channel.contains("\\0")) {
@@ -612,7 +613,7 @@ public class Connection implements Runnable {
 		}
 		
 		String Owner = resource.containsKey("owner") ?
-		        (resource.get("name") == null ?
+		        (resource.get("owner") == null ?
 		                "" : (String) resource.get("owner")) 
 		        : "";
 		if (Owner.contains("\\0") || Owner.contains("*")) {

@@ -28,8 +28,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 class Client {
-    private static String ip;
-    private static int port;
+    private static String ip = "localhost";
+    private static int port = 3780;
     private static Boolean debug = false; //verbose output   
     private static final int TIMEOUT_SECS = 3;
     private static Boolean relay = false; //For disabling relay to other servers when querying
@@ -82,13 +82,11 @@ class Client {
         }
         
         //Port and IP (aka "host") should be provided
-        if (initCmd.hasOption("port") && initCmd.hasOption("host")) {
-            port = Integer.parseInt(initCmd.getOptionValue("port"));
+        if (initCmd.hasOption("port")) {
+            port = Integer.parseInt(initCmd.getOptionValue("port"));   
+        }
+        if (initCmd.hasOption("host")) {
             ip = initCmd.getOptionValue("host");
-        } else {
-            System.out.println("Please provide IP and PORT options");
-            PrintValidArgumentList();
-            System.exit(0);
         }
         
         debug = initCmd.hasOption("debug");
