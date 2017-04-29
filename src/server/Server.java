@@ -46,7 +46,7 @@ public class Server extends TimerTask {
     private static final int SOCKET_TIMEOUT_MS = 2*1000;    //ms
     
     private static int connections_cnt = 0;
-    private static int port;
+    private static int port = 3780;
     private static String hostname;
     private static String secret;
     private static Boolean debug = false;
@@ -82,10 +82,6 @@ public class Server extends TimerTask {
         
         if (cmd.hasOption("port")) {
             port = Integer.parseInt(cmd.getOptionValue("port"));
-        } else {
-            System.out.println("Please provide port number.");
-            PrintValidArgumentList();
-            System.exit(0);
         }
         
         //self assign a hostname
@@ -174,7 +170,7 @@ public class Server extends TimerTask {
                             + ": " + clientIP + " has connected.");
                 }
                 //Create, and start, a new thread that processes incoming connections
-                executor.submit(new Connection(cmd, client, Server.secret));
+                executor.submit(new Connection(cmd, client, Server.secret, Server.hostname, Server.port));
             }
         } catch (Exception e) {
             e.printStackTrace();

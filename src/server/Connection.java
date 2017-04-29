@@ -33,12 +33,12 @@ public class Connection implements Runnable {
 	private String hostname;
 	private int port;
 	
-	public Connection(CommandLine cmd, Socket client, String secret) {
+	public Connection(CommandLine cmd, Socket client, String secret, String hostname, int port) {
 		this.client = client;
 		this.serverSecret = secret;
-		this.hostname = cmd.getOptionValue("advertisedhostname");
+		this.hostname = hostname;
 		this.debug = cmd.hasOption("debug") ? true : false;
-		this.port = Integer.parseInt(cmd.getOptionValue("port"));
+		this.port = port;
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -383,6 +383,7 @@ public class Connection implements Runnable {
             //Send QUERY command to that server
             try {
                 Socket socket = new Socket(hostname, port);
+                socket.setSoTimeout(SECS_TO_TIMEOUT);
                 //Get I/O streams for connection
                 DataInputStream input = new DataInputStream(socket.getInputStream());
                 DataOutputStream output = new DataOutputStream(socket.getOutputStream());
