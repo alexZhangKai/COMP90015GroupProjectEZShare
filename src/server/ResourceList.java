@@ -19,36 +19,45 @@ import java.util.List;
 public class ResourceList {
 	private static ArrayList<Resource> resourceList = new ArrayList<Resource>();
   
+	private synchronized static boolean modifyReourceList (boolean operation, Resource resource) throws serverException {
+		//true for add, false for remove 
+		if (operation) {
+			return resourceList.add(resource);
+		} else {
+			return resourceList.remove(resource);
+		}
+	}
+	
 	//thread safe because of "synchronized"
-	public synchronized static void addResource(Resource newResource) throws serverException {
+	public static void addResource(Resource newResource) throws serverException {
 		//Check if resource already exists with same channel and URI
 		Resource match = queryForChannelURI(newResource);
 		
 		//if no existing resource channel and URI matches... 
-		if(match == null) {
+		if (match == null) {
 		    //...then add it.
-			if(!resourceList.add(newResource)) {
+			if (!modifyReourceList(true, newResource)) {
 				throw new serverException("cannot publish resource");
 			}
 			//otherwise...
 		} else { 
 		    //...check if their owners are the same. 
 		        //If not, deny publish request.
-			if(!match.getOwner().equals(newResource.getOwner()))
+			if (!match.getOwner().equals(newResource.getOwner()))
 				throw new serverException("cannot publish resource");
 			
 			   //...else: remove existing resource with that PK and add new one 
-			if (!resourceList.remove(match) || !resourceList.add(newResource)) 
+			if (!modifyReourceList(false, match) || !modifyReourceList(true, newResource)) 
 				throw new serverException("cannot publish resource");
 		}
 	}
 	
-	public synchronized static void removeResource(Resource oldResource) throws serverException {
+	public static void removeResource(Resource oldResource) throws serverException {
 		Resource match = queryForPK(oldResource);
-		if(match == null) {
+		if (match == null) {
 			throw new serverException("cannot remove resource");
 		} else {
-			if(!resourceList.remove(match)) throw new serverException("cannot remove resource");
+			if (!modifyReourceList(false, match)) throw new serverException("cannot remove resource");
 		}
 	}
 
@@ -57,8 +66,8 @@ public class ResourceList {
 	    //Check if resource already exists...
 	    Resource match = null;
 		
-		for(int i = 0; i < resourceList.size(); i++) {    //...return its position in the list if it does.
-			if(re.getChannel().equals(resourceList.get(i).getChannel()) && 
+		for (int i = 0; i < resourceList.size(); i++) {    //...return its position in the list if it does.
+			if (re.getChannel().equals(resourceList.get(i).getChannel()) && 
 				re.getOwner().equals(resourceList.get(i).getOwner()) &&
 				re.getUri().equals(resourceList.get(i).getUri())) {
 				match = resourceList.get(i);
@@ -70,8 +79,8 @@ public class ResourceList {
 	public static Resource queryForChannelURI(Resource re) {
 	    Resource match = null;
 	    
-		for(int i = 0; i < resourceList.size(); i++) {    //...return its position in the list if it does.
-			if((re.getChannel().equals(resourceList.get(i).getChannel())) &&
+		for (int i = 0; i < resourceList.size(); i++) {    //...return its position in the list if it does.
+			if ((re.getChannel().equals(resourceList.get(i).getChannel())) &&
 					(re.getUri().equals(resourceList.get(i).getUri()))) {
 				match = resourceList.get(i);
 			}
@@ -84,7 +93,7 @@ public class ResourceList {
 	}
 
 	//Return a list of resources that match the 'query' criteria
-    public synchronized static List<Resource> queryForQuerying(Resource in_res) {
+    public static List<Resource> queryForQuerying(Resource in_res) {
         List<Resource> results = new ArrayList<>();
         
         // Query current resource list for resources that match the template
