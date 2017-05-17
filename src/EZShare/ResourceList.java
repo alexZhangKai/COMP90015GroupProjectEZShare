@@ -99,7 +99,7 @@ public class ResourceList {
         // Query current resource list for resources that match the template
         for (Resource curr_res: resourceList){
             if (in_res.getChannel().equals(curr_res.getChannel()) && 
-                    in_res.getOwner().equals(curr_res.getOwner()) &&
+                    compareOwner(in_res.getOwner(), curr_res.getOwner()) &&
                     compareTags(in_res.getTags(), curr_res.getTags()) &&
                     compareUri(in_res.getUri(), curr_res.getUri()) &&
                         (curr_res.getName().contains(in_res.getName()) ||
@@ -118,6 +118,15 @@ public class ResourceList {
         return results;
     }
     
+    private static boolean compareOwner(String in_owner, String curr_owner) {
+        if (in_owner.equals("")) {
+            return true;
+        }
+        else {
+            return (in_owner.equals(curr_owner));
+        }
+    }
+
     //Compare the two URIs for Query purposes. If the incoming URI has no host i.e. is empty, it should match all URIs
     //...otherwise only an exact match is acceptable
     private static boolean compareUri(URI in_uri, URI curr_uri) {
