@@ -99,11 +99,11 @@ public class ResourceList {
         // Query current resource list for resources that match the template
         for (Resource curr_res: resourceList){
             if (in_res.getChannel().equals(curr_res.getChannel()) && 
-                    in_res.getOwner().equals(curr_res.getOwner()) &&
+                    compareOwner(in_res.getOwner(), curr_res.getOwner()) &&
                     compareTags(in_res.getTags(), curr_res.getTags()) &&
                     compareUri(in_res.getUri(), curr_res.getUri()) &&
-                        (curr_res.getName().contains(in_res.getName()) ||
-                        curr_res.getDescription().contains(in_res.getDescription()))) 
+                    curr_res.getName().contains(in_res.getName()) &&
+                    curr_res.getDescription().contains(in_res.getDescription())) 
             {
                 
                 //Copy current resource into results list if it matches criterion
@@ -118,6 +118,15 @@ public class ResourceList {
         return results;
     }
     
+    private static boolean compareOwner(String in_owner, String curr_owner) {
+        if (in_owner.equals("")) {
+            return true;
+        }
+        else {
+            return (in_owner.equals(curr_owner));
+        }
+    }
+
     //Compare the two URIs for Query purposes. If the incoming URI has no host i.e. is empty, it should match all URIs
     //...otherwise only an exact match is acceptable
     private static boolean compareUri(URI in_uri, URI curr_uri) {
@@ -130,13 +139,10 @@ public class ResourceList {
 
     //Compare the two tag sets. The incoming resource template's tags should be a subset of the current resource's.
     private static boolean compareTags(List<String> in_res, List<String> curr_res) {
-        if (in_res.size() == 0 && curr_res.size() == 0) {
+        if (in_res.size() == 0) {
             return true;
         }
-        else if (in_res.size() == 0 && curr_res.size() != 0){
-            return false;
-        }
-        else if (in_res.size() != 0 && curr_res.size() == 0){
+        else if (curr_res.size() == 0) {
             return false;
         }
         else {
