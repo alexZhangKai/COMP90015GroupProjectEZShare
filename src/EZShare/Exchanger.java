@@ -5,6 +5,8 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.Socket;
+import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.sql.Timestamp;
 import java.util.TimerTask;
 
@@ -81,21 +83,19 @@ public class Exchanger extends TimerTask{
                             + " - [DEBUG] - SENT: " + command.toJSONString());
                 }
                 output.flush();
-                
+                String recv_response;
                 while(true) {
-                    if (input.available() > 0) {
-                        String recv_response = input.readUTF();
-                        if (Server.debug) {
-                            System.out.println(new Timestamp(System.currentTimeMillis())
-                                    + " - [DEBUG] - RECEIVED: " + recv_response);
+                    try {
+                        if ((recv_response = input.readUTF()) != null) {
+                            
+                            if (Server.debug) {
+                                System.out.println(new Timestamp(System.currentTimeMillis())
+                                        + " - [DEBUG] - RECEIVED: " + recv_response);
+                            }
                         }
-                    }
-                    if ((System.currentTimeMillis() - startTime) > Server.SOCKET_TIMEOUT_MS){
-                        if (secure) {
-                            sslsocket.close();
-                        } else {
-                            socket.close();
-                        }
+                    } catch (SocketException e) {
+                        break;
+                    } catch (SocketTimeoutException e){ //socket timed out
                         break;
                     }
                 }

@@ -37,7 +37,7 @@ public class Server {
 
     //minimum time between each successive connection from the same IP address
     private static long connectionIntervalLimit = 1*1000;   //milliseconds
-    private static long exchangeIntervalLimit = 10*60;   //seconds
+    private static long exchangeIntervalLimit = 30;   //seconds
     //max number of concurrent client connections allowed
     private static final int MAX_THREADS = 10;
     
