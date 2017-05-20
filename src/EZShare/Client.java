@@ -406,11 +406,7 @@ class Client {
                 output = new DataOutputStream(unsecSocket.getOutputStream());
                 unsecSocket.setSoTimeout(TIMEOUT_SECS*1000);
             }
-            
-            //record start time
-            //TODO remove all start and end times for manual timeouts?
-//            long startTime = System.currentTimeMillis();
-            
+                        
             //send request
             output.writeUTF(request);
             output.flush();
@@ -444,10 +440,6 @@ class Client {
                     //TODO Add timeoutexception to all cases where "read = input.readUTF()) != null" is used
                     break;
                 }
-                //TODO Still needed or does Timeout for socket work?
-//                if ((System.currentTimeMillis() - startTime) > TIMEOUT_SECS*1000){
-//                    break;
-//                }
             }
             if (secure){
                 sslsocket.close();

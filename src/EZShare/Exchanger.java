@@ -66,7 +66,6 @@ public class Exchanger extends TimerTask{
                     socket.setSoTimeout(Server.SOCKET_TIMEOUT_MS);
                 }
                 
-                long startTime = System.currentTimeMillis();
                 JSONObject command = new JSONObject();
                 command.put("command", "EXCHANGE");
                 

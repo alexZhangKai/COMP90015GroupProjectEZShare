@@ -124,7 +124,9 @@ public class Connection implements Runnable {
 			} catch (IOException e1) {
 				e1.printStackTrace();
 			}
-		}		
+		} //TODO add sockets closures now that they're not inside the TRY ()
+		// TODO JAR file containing keystores not accessible
+		// TODO Add socket timeout exceptions to all TRYs
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -446,10 +448,9 @@ public class Connection implements Runnable {
                 output.flush();
                             
                 String read;
-                while (true) {
-                    //TODO input.available() > 0 has been replaced. Does it work?
-                    
+                while (true) {                    
                     try {
+                        //TODO query command keeps looping with a SocketTimeOut exception
                         if ((read = input.readUTF()) != null) {
                             //get results and store in results list
                             JSONObject temp_response = (JSONObject) parser.parse(read);
@@ -464,13 +465,11 @@ public class Connection implements Runnable {
                         }
                     } catch (SocketException e){    //when the other side closes the connection
                         break;
+                    } catch (SocketTimeoutException e){
+                        break;
                     } catch (Exception e) {
-                        // TODO Auto-generated catch block
                         e.printStackTrace();
                     }
-//                    if ((System.currentTimeMillis() - startTime) > SECS_TO_TIMEOUT*1000){
-//                        break;
-//                    }
                 }
                 if (secure) {
                     sslsocket.close();
