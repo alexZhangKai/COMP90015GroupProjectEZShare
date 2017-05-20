@@ -62,6 +62,14 @@ class Client {
     }
     
     public static void main(String[] args) {
+      //Set truststore and keystore with its password
+        System.setProperty("javax.net.ssl.trustStore", "keystores/client.jks");
+        System.setProperty("javax.net.ssl.keyStore","keystores/client.jks");
+        System.setProperty("javax.net.ssl.keyStorePassword","aalt_s");
+
+        // Enable debugging to view the handshake and communication which happens between the SSLClient and the SSLServer
+//        System.setProperty("javax.net.debug","all");
+        
         System.out.println("\n" + new Timestamp(System.currentTimeMillis()) + " - [INFO] - Starting the EZShare Client\n"); 
 
         //possible input arguments

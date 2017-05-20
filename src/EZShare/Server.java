@@ -36,20 +36,22 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
 
-public class Server extends TimerTask {
+public class Server {
 
     //minimum time between each successive connection from the same IP address
     private static long connectionIntervalLimit = 1*1000;   //milliseconds
     private static long exchangeIntervalLimit = 10*60;   //seconds
     //max number of concurrent client connections allowed
     private static final int MAX_THREADS = 10;
-    private static final int SOCKET_TIMEOUT_MS = 2*1000;    //ms
+    //TODO leave the public members as is? Made public for Exchanger to access
+    public static final int SOCKET_TIMEOUT_MS = 2*1000;    //ms
     
     private static int connections_cnt = 0;
     private static int port = 3780;
-    private static String hostname;
+    private static int sPort = 3781; 
+    public static String hostname;
     private static String secret;
-    private static Boolean debug = false;
+    public static Boolean debug = false;
     private static final Map<String, Boolean> argOptions;
     private static Map<String, Long> clientIPList = new HashMap<>();
     
@@ -64,6 +66,14 @@ public class Server extends TimerTask {
     }
     
     public static void main(String[] args) {        
+        //Set truststore and keystore with its password
+        System.setProperty("javax.net.ssl.trustStore", "keystores/server.jks");
+        System.setProperty("javax.net.ssl.keyStore","keystores/server.jks");
+        System.setProperty("javax.net.ssl.keyStorePassword","aalt_s");
+
+        // Enable debugging to view the handshake and communication which happens between the SSLClient and the SSLServer
+//        System.setProperty("javax.net.debug","all");
+        
         //Parse CMD options
         Options options = new Options();
         for (String option: argOptions.keySet()){
@@ -132,7 +142,7 @@ public class Server extends TimerTask {
                     + " - [INFO] - bound to port " + Server.port);
              
             //Set exchange schema
-            TimerTask timerTask = new Server();
+            TimerTask timerTask = new Exchanger();
     		Timer timer = new Timer(true);
     		timer.scheduleAtFixedRate(timerTask, 1, Server.exchangeIntervalLimit*1000);
             
@@ -177,69 +187,7 @@ public class Server extends TimerTask {
         }
     }
 
-    //Send EXCHANGE command every 10 minutes
-	@SuppressWarnings("unchecked")
-	@Override
-	public void run() {
-	    System.out.println("\n" + new Timestamp(System.currentTimeMillis()) 
-	            + " - [INFO] - started Exchanger\n");
-	    
-		if (ServerList.getLength() > 0) {
-			//select a random server from the list
-		    JSONObject receiver = ServerList.select();
-			String ip = (String) receiver.get("hostname");
-			int port = Integer.parseInt(receiver.get("port").toString());
-			
-			//connect to it and exchange list of servers
-			try (Socket soc = new Socket(ip, port)){
-			    soc.setSoTimeout(SOCKET_TIMEOUT_MS);
-			    
-				DataInputStream input = new DataInputStream(soc.getInputStream());
-	            DataOutputStream output = new DataOutputStream(soc.getOutputStream());
-	            long startTime = System.currentTimeMillis();
-	            JSONObject command = new JSONObject();
-	            command.put("command", "EXCHANGE");
-	            
-	            JSONArray serverArr = ServerList.getCopyServerList();
-	            JSONObject host = new JSONObject();
-	            host.put("hostname", hostname);
-	            host.put("port", port);
-	            serverArr.add(host);
-
-	            command.put("serverList", serverArr);
-	            output.writeUTF(command.toJSONString());
-	            if (debug) {
-                    System.out.println(new Timestamp(System.currentTimeMillis())
-                            + " - [DEBUG] - SENT: " + command.toJSONString());
-                }
-	            output.flush();
-	            
-	            while(true) {
-	            	if (input.available() > 0) {
-	            		String recv_response = input.readUTF();
-	            		if (debug) {
-	                        System.out.println(new Timestamp(System.currentTimeMillis())
-	                                + " - [DEBUG] - RECEIVED: " + recv_response);
-	                    }
-	            	}
-	            	if ((System.currentTimeMillis() - startTime) > SOCKET_TIMEOUT_MS){
-	            	    soc.close();
-	            		break;
-	            	}
-	            }
-			} catch (ConnectException e) {
-                System.out.println(new Timestamp(System.currentTimeMillis())
-                        + " - [ERROR] - Connection timed out.");
-                ServerList.remove(receiver);
-            } 
-			catch (IOException e) {
-				System.out.println(new Timestamp(System.currentTimeMillis())
-				        + " - [ERROR] - IO Exception occurred.");
-				ServerList.remove(receiver);
-			}
-		}		
-	}
-	
+    
 	private static void PrintValidArgumentList() {
         System.out.println("Valid arguments include: \n"
                 + "\t -advertisedhostname <arg>         advertised hostname \n"
