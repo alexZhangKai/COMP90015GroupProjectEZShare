@@ -18,7 +18,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.commons.cli.CommandLine;
 import org.json.simple.JSONArray;
 
 import org.json.simple.JSONObject;
@@ -33,11 +32,11 @@ public class Connection implements Runnable {
 	private String hostname;
 	private int port;
 	
-	public Connection(CommandLine cmd, Socket client, String secret, String hostname, int port) {
+	public Connection(Boolean debug, Socket client, String secret, String hostname, int port) {
 		this.client = client;
 		this.serverSecret = secret;
 		this.hostname = hostname;
-		this.debug = cmd.hasOption("debug") ? true : false;
+		this.debug = debug;
 		this.port = port;
 	}
 	
