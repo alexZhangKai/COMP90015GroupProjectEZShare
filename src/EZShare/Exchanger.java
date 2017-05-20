@@ -8,35 +8,67 @@ import java.net.Socket;
 import java.sql.Timestamp;
 import java.util.TimerTask;
 
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
+
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
 public class Exchanger extends TimerTask{
+    private Boolean secure = false;
+    
+    public Exchanger(int i) {
+        secure = i==1;
+    }
 
     //Send EXCHANGE command every 10 minutes
     @SuppressWarnings("unchecked")
     @Override
     public void run() {
-        System.out.println("\n" + new Timestamp(System.currentTimeMillis()) 
-                + " - [INFO] - started Exchanger\n");
+        ServerList sList = null;
+        if (secure){
+            sList = ServerListManager.getSecServerList();
+            System.out.println("\n" + new Timestamp(System.currentTimeMillis()) 
+                    + " - [INFO] - started secure Exchanger\n");
+        } else {
+            sList = ServerListManager.getUnsecServerList();
+            System.out.println("\n" + new Timestamp(System.currentTimeMillis()) 
+                    + " - [INFO] - started Exchanger\n");
+        }
         
-        if (ServerList.getLength() > 0) {
+        if (sList.getLength() > 0) {
             //select a random server from the list
-            JSONObject receiver = ServerList.select();
+            JSONObject receiver = sList.select();
             String ip = (String) receiver.get("hostname");
             int port = Integer.parseInt(receiver.get("port").toString());
             
             //connect to it and exchange list of servers
-            try (Socket soc = new Socket(ip, port)){
-                soc.setSoTimeout(Server.SOCKET_TIMEOUT_MS);
+            try {
                 
-                DataInputStream input = new DataInputStream(soc.getInputStream());
-                DataOutputStream output = new DataOutputStream(soc.getOutputStream());
+                SSLSocketFactory sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
+                SSLSocket sslsocket = null;
+                Socket socket = null;
+                DataInputStream input;
+                DataOutputStream output;
+                
+                if (secure){
+                    sslsocket = (SSLSocket) sslsocketfactory.createSocket(ip, port);
+                  //Get I/O streams for connection
+                    input = new DataInputStream(sslsocket.getInputStream());
+                    output = new DataOutputStream(sslsocket.getOutputStream());
+                    sslsocket.setSoTimeout(Server.SOCKET_TIMEOUT_MS);
+                } else{
+                    socket = new Socket(ip, port);
+                    input = new DataInputStream(socket.getInputStream());
+                    output = new DataOutputStream(socket.getOutputStream());
+                    socket.setSoTimeout(Server.SOCKET_TIMEOUT_MS);
+                }
+                
                 long startTime = System.currentTimeMillis();
                 JSONObject command = new JSONObject();
                 command.put("command", "EXCHANGE");
                 
-                JSONArray serverArr = ServerList.getCopyServerList();
+                JSONArray serverArr = sList.getCopyServerList();
                 JSONObject host = new JSONObject();
                 host.put("hostname", Server.hostname);
                 host.put("port", port);
@@ -59,22 +91,24 @@ public class Exchanger extends TimerTask{
                         }
                     }
                     if ((System.currentTimeMillis() - startTime) > Server.SOCKET_TIMEOUT_MS){
-                        soc.close();
+                        if (secure) {
+                            sslsocket.close();
+                        } else {
+                            socket.close();
+                        }
                         break;
                     }
                 }
             } catch (ConnectException e) {
                 System.out.println(new Timestamp(System.currentTimeMillis())
                         + " - [ERROR] - Connection timed out.");
-                ServerList.remove(receiver);
+                sList.remove(receiver);
             } 
             catch (IOException e) {
                 System.out.println(new Timestamp(System.currentTimeMillis())
                         + " - [ERROR] - IO Exception occurred.");
-                ServerList.remove(receiver);
+                sList.remove(receiver);
             }
         }       
     }
-    
-
 }

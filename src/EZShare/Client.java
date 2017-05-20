@@ -13,6 +13,8 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.RandomAccessFile;
 import java.net.Socket;
+import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.sql.Timestamp;
 
 import org.apache.commons.cli.CommandLine;
@@ -27,10 +29,15 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
+
 class Client {
     private static String ip = "localhost";
     private static int port = 3780;
-    private static Boolean debug = false; //verbose output   
+    private static int sPort = 3781;
+    private static Boolean debug = false; //verbose output
+    private static Boolean secure = false;
     private static final int TIMEOUT_SECS = 3;
     private static Boolean relay = false; //For disabling relay to other servers when querying
     private static int CHUNK_SIZE = 1024*1024;
@@ -51,6 +58,7 @@ class Client {
         argOptions.put("query", false);
         argOptions.put("remove", false);
         argOptions.put("secret", true);
+        argOptions.put("secure", false);
         argOptions.put("servers", true);
         argOptions.put("share", false);
         argOptions.put("tags", true);
@@ -99,6 +107,10 @@ class Client {
         
         debug = initCmd.hasOption("debug");
         relay = !initCmd.hasOption("norelay");
+        secure = initCmd.hasOption("secure");
+        if (secure && !initCmd.hasOption("port")) {
+            port = sPort;
+        }
         
         //Decipher command and call respective method
         if (initCmd.hasOption("publish")) {
@@ -192,14 +204,25 @@ class Client {
         command.put("command", "FETCH");
         command.put("resourceTemplate", resourceTemplate);
         
-        try (Socket socket = new Socket(ip, port)){
-            //Get I/O streams for connection
-            DataInputStream input = new DataInputStream(socket.getInputStream());
-            DataOutputStream output = new DataOutputStream(socket.getOutputStream());
-            
-            //record start time
-            long start = System.currentTimeMillis();
-            
+        SSLSocketFactory sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
+        SSLSocket sslsocket = null;
+        Socket unsecSocket = null;
+        DataInputStream input;
+        DataOutputStream output;
+        
+        try {   
+            if (secure){
+                sslsocket = (SSLSocket) sslsocketfactory.createSocket(ip, port);
+              //Get I/O streams for connection
+                input = new DataInputStream(sslsocket.getInputStream());
+                output = new DataOutputStream(sslsocket.getOutputStream());
+                sslsocket.setSoTimeout(TIMEOUT_SECS*1000);
+            } else{
+                unsecSocket = new Socket(ip, port);
+                input = new DataInputStream(unsecSocket.getInputStream());
+                output = new DataOutputStream(unsecSocket.getOutputStream());
+                unsecSocket.setSoTimeout(TIMEOUT_SECS*1000);
+            }            
             //send request
             output.writeUTF(command.toJSONString());
             if (debug) {
@@ -209,67 +232,73 @@ class Client {
             output.flush();
             
             JSONParser JSONparser = new JSONParser();
-            
+            String result;
             while(true) {
-            	if(input.available() > 0) {
-            		String result = input.readUTF();
-            		if (debug) {
-                        System.out.println(new Timestamp(System.currentTimeMillis())
-                                +" - [DEBUG] - RECEIVED: " + result);
-                    }
-            		JSONObject reply = (JSONObject) JSONparser.parse(result);
-            		//the first reply: response
-            		if(reply.containsKey("response")) {
-            			if(reply.get("response").equals("success")) {
-            				System.out.println("Success");
-            			    continue;
-            			} else {
-            				System.out.println("Error occurred.");
-            				break;
-            			}
-            		}
-            		//the second reply: resource and file
-            		if(reply.containsKey("resourceSize")) {
-            			Long fileSizeRemaining = (Long) reply.get("resourceSize");            			
-            			int chunkSize = setChunkSize(fileSizeRemaining);            			
-            			byte[] receiveBuffer = new byte[chunkSize];
-            			String uri = (String)reply.get("uri");
-            			
-            			//this only works for Linux?
-            			String fileName = uri.substring(uri.lastIndexOf('/') + 1, uri.length());
-            			RandomAccessFile downloadingFile = new RandomAccessFile(fileName, "rw");
+//            	if(input.available() > 0) {
+                try {
+                    if((result = input.readUTF()) != null){
+                    	if (debug) {
+                            System.out.println(new Timestamp(System.currentTimeMillis())
+                                    +" - [DEBUG] - RECEIVED: " + result);
+                        }
+                    	JSONObject reply = (JSONObject) JSONparser.parse(result);
+                    	//the first reply: response
+                    	if(reply.containsKey("response")) {
+                    		if(reply.get("response").equals("success")) {
+                    			System.out.println("Success");
+                    		    continue;
+                    		} else {
+                    			System.out.println("Error occurred.");
+                    			break;
+                    		}
+                    	}
+                    	//the second reply: resource and file
+                    	if(reply.containsKey("resourceSize")) {
+                    		Long fileSizeRemaining = (Long) reply.get("resourceSize");            			
+                    		int chunkSize = setChunkSize(fileSizeRemaining);            			
+                    		byte[] receiveBuffer = new byte[chunkSize];
+                    		String uri = (String)reply.get("uri");
+                    		
+                    		//this only works for Linux?
+                    		String fileName = uri.substring(uri.lastIndexOf('/') + 1, uri.length());
+                    		RandomAccessFile downloadingFile = new RandomAccessFile(fileName, "rw");
 
-            			//remaining file size
-            			int num;
-                        System.out.println(new Timestamp(System.currentTimeMillis())
-                                    +" - [INFO] - Downloading file of size: " 
-                                    + fileSizeRemaining + " bytes.");
-                        
-                        //read actual file
-            			while((num = input.read(receiveBuffer)) > 0) {
-            				downloadingFile.write(Arrays.copyOf(receiveBuffer, num));
-            				fileSizeRemaining -= num;
-            				
-            				chunkSize = setChunkSize(fileSizeRemaining);
-            				receiveBuffer = new byte[chunkSize];
-            				
-            				if(fileSizeRemaining == 0){
-            					break;
-            				}
-            			}
-            			
-            			System.out.println(new Timestamp(System.currentTimeMillis())
-            			        +" - [INFO] - File downloaded.");
-            			downloadingFile.close();
-            		}
-            		
-            		//the last reply: resultSize
-            		if(reply.containsKey("resultSize")) {
-            		    break;
-            		}
-            	}
-            	//connection timeout
-                if((System.currentTimeMillis() - start) > TIMEOUT_SECS*1000) {
+                    		//remaining file size
+                    		int num;
+                            System.out.println(new Timestamp(System.currentTimeMillis())
+                                        +" - [INFO] - Downloading file of size: " 
+                                        + fileSizeRemaining + " bytes.");
+                            
+                            //read actual file
+                    		while((num = input.read(receiveBuffer)) > 0) {
+                    			downloadingFile.write(Arrays.copyOf(receiveBuffer, num));
+                    			fileSizeRemaining -= num;
+                    			
+                    			chunkSize = setChunkSize(fileSizeRemaining);
+                    			receiveBuffer = new byte[chunkSize];
+                    			
+                    			if(fileSizeRemaining == 0){
+                    				break;
+                    			}
+                    		}
+                    		
+                    		System.out.println(new Timestamp(System.currentTimeMillis())
+                    		        +" - [INFO] - File downloaded.");
+                    		downloadingFile.close();
+                    	}
+                    	
+                    	//the last reply: resultSize
+                    	if(reply.containsKey("resultSize")) {
+                    	    break;
+                    	}
+                    }
+                    //connection timeout
+//                    if((System.currentTimeMillis() - start) > TIMEOUT_SECS*1000) {
+//                        break;
+//                    }
+                } catch (SocketException e){    //connection closed
+                    break;
+                } catch (SocketTimeoutException e){ //socket has timed out
                     break;
                 }
             }
@@ -357,13 +386,30 @@ class Client {
     
     //Send JSON command to server
     public static void generalReply(String request) {
-        try (Socket socket = new Socket(ip, port)){
-            //Get I/O streams for connection
-            DataInputStream input = new DataInputStream(socket.getInputStream());
-            DataOutputStream output = new DataOutputStream(socket.getOutputStream());
-
+        
+        try {
+            SSLSocketFactory sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
+            SSLSocket sslsocket = null;
+            Socket unsecSocket = null;
+            DataInputStream input;
+            DataOutputStream output;
+            
+            if (secure){
+                sslsocket = (SSLSocket) sslsocketfactory.createSocket(ip, port);
+              //Get I/O streams for connection
+                input = new DataInputStream(sslsocket.getInputStream());
+                output = new DataOutputStream(sslsocket.getOutputStream());
+                sslsocket.setSoTimeout(TIMEOUT_SECS*1000);
+            } else{
+                unsecSocket = new Socket(ip, port);
+                input = new DataInputStream(unsecSocket.getInputStream());
+                output = new DataOutputStream(unsecSocket.getOutputStream());
+                unsecSocket.setSoTimeout(TIMEOUT_SECS*1000);
+            }
+            
             //record start time
-            long startTime = System.currentTimeMillis();
+            //TODO remove all start and end times for manual timeouts?
+//            long startTime = System.currentTimeMillis();
             
             //send request
             output.writeUTF(request);
@@ -374,25 +420,41 @@ class Client {
             }
                         
             JSONParser parser = new JSONParser();
+            String recv;
+            
             while(true) {
-                if(input.available() > 0) {
-                    String recv = input.readUTF();
-                    JSONObject reply = (JSONObject) parser.parse(recv);
-                    if (debug) {
-                        System.out.println(new Timestamp(System.currentTimeMillis())
-                                + " - [DEBUG] - RECEIVED: " + recv);
+//                if(input.available() > 0) {
+                try {
+                    if((recv = input.readUTF()) != null){
+                        JSONObject reply = (JSONObject) parser.parse(recv);
+                        if (debug) {
+                            System.out.println(new Timestamp(System.currentTimeMillis())
+                                    + " - [DEBUG] - RECEIVED: " + recv);
+                        }
+                        else {
+                            System.out.println("Response from server: " + recv);
+                        }
+                        if (reply.containsKey("resultSize")) {
+                            break;
+                        }
                     }
-                    else {
-                        System.out.println("Response from server: " + recv);
-                    }
-                    if (reply.containsKey("resultSize")) {
-                        break;
-                    }
-                }
-                if ((System.currentTimeMillis() - startTime) > TIMEOUT_SECS*1000){
+                } catch (SocketException e){    //socket closed on other end
+                    break;
+                } catch (SocketTimeoutException e){ //socket timed out
+                    //TODO Add timeoutexception to all cases where "read = input.readUTF()) != null" is used
                     break;
                 }
+                //TODO Still needed or does Timeout for socket work?
+//                if ((System.currentTimeMillis() - startTime) > TIMEOUT_SECS*1000){
+//                    break;
+//                }
             }
+            if (secure){
+                sslsocket.close();
+            } else {
+                unsecSocket.close();
+            }
+            
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -414,6 +476,7 @@ class Client {
                 + "\t -norelay          do not relay query command to other servers \n"
                 + "\t -remove           remove resource from server \n"
                 + "\t -secret <arg>     secret \n"
+                + "\t -secure           use secure connection \n"
                 + "\t -servers <arg>    server list, host1:port1,host2:port2,... \n"
                 + "\t -share            share resource on server \n"
                 + "\t -tags <arg>       resource tags, tag1,tag2,tag3,... \n"

@@ -9,9 +9,6 @@
 
 package EZShare;
 
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -62,6 +59,7 @@ public class Server {
         argOptions.put("connectionintervallimit", true);
         argOptions.put("exchangeinterval", true);
         argOptions.put("port", true);
+        argOptions.put("sport", true);
         argOptions.put("secret", true);
         argOptions.put("debug", false);
     }
@@ -85,6 +83,9 @@ public class Server {
         
         if (cmd.hasOption("port")) {
             port = Integer.parseInt(cmd.getOptionValue("port"));
+        }
+        if (cmd.hasOption("sport")){
+            sPort = Integer.parseInt(cmd.getOptionValue("sport"));
         }
         
         //self assign a hostname
@@ -128,6 +129,13 @@ public class Server {
         
         SSLServerListen();
         UnsecureServerListen();
+        
+        //Set exchange schema
+        for (int i = 0; i < 2; i++) {
+            TimerTask timerTask = new Exchanger(i);
+            Timer timer = new Timer(true);
+            timer.scheduleAtFixedRate(timerTask, 1, Server.exchangeIntervalLimit*1000);
+        }
     }
 
     
@@ -138,6 +146,7 @@ public class Server {
                 + "\t -exchangeinterval <arg>           exchange interval in seconds \n"
                 + "\t -port <arg>                       server port, an integer \n"
                 + "\t -secret <arg>                     secret \n"
+                + "\t -sport <arg>                      port for secure connection \n"
                 + "\t -debug                            print debug information \n");
     }
 
@@ -146,6 +155,7 @@ public class Server {
 	        
             @Override
             public void run() {
+                Boolean secure = true;
               //Set truststore and keystore with its password
                 System.setProperty("javax.net.ssl.trustStore", "keystores/server.jks");
                 System.setProperty("javax.net.ssl.keyStore","keystores/server.jks");
@@ -153,33 +163,51 @@ public class Server {
 
                 // Enable debugging to view the handshake and communication which happens between the SSLClient and the SSLServer
 //                System.setProperty("javax.net.debug","all");
-                
-                try {
-                    //Create SSL server socket
-                    SSLServerSocketFactory sslserversocketfactory = 
-                            (SSLServerSocketFactory) SSLServerSocketFactory.getDefault();
-                    SSLServerSocket sslserversocket = 
-                            (SSLServerSocket) sslserversocketfactory.createServerSocket(sPort);
+                SSLServerSocketFactory sslserversocketfactory = 
+                        (SSLServerSocketFactory) SSLServerSocketFactory.getDefault();
+                try (SSLServerSocket sslserversocket = 
+                            (SSLServerSocket) sslserversocketfactory
+                            .createServerSocket(sPort);){
+                    System.out.println(new Timestamp(System.currentTimeMillis()) 
+                            + " - [INFO] - bound to secure port " + Server.sPort);
                     
                     //require client authentication
                     sslserversocket.setNeedClientAuth(true);
                     
-                    System.out.println("Server listening for connections...");
-                    //Accept client connection
-                    SSLSocket sslsocket = (SSLSocket) sslserversocket.accept();
-                    
-                    System.out.println("Connection accepted.");
+                    ExecutorService executor = Executors.newFixedThreadPool(MAX_THREADS);
+                    while (true){
+                        SSLSocket sClient = (SSLSocket) sslserversocket.accept();
+                        
+                        //check connection interval time limit
+                        String clientIP = sClient.getInetAddress().toString();
 
-                    //Create buffered reader to read input from the client
-                    InputStream inputstream = sslsocket.getInputStream();
-                    InputStreamReader inputstreamreader = new InputStreamReader(inputstream);
-                    BufferedReader bufferedreader = new BufferedReader(inputstreamreader);
-
-                    String string = null;
-                    //Read input from the client and print it to the screen
-                    while ((string = bufferedreader.readLine()) != null) {
-                        System.out.println(string);
-                    }
+                        //if client had connected before...
+                        if (clientIPList.containsKey(clientIP)) {
+                            //...and if enough time has passed...
+                            if((System.currentTimeMillis() - clientIPList.get(clientIP)) 
+                                    > connectionIntervalLimit) {
+                                //...update to latest timestamp
+                                clientIPList.put(clientIP, System.currentTimeMillis());
+                            } else {
+                                //Otherwise it's too soon - close connection!
+                                System.out.println(new Timestamp(System.currentTimeMillis())
+                                        + " - [WARNING] - " + clientIP + " tried connect too soon.\n");
+                                sClient.close();
+                                continue;
+                            }
+                        } else {
+                            clientIPList.put(clientIP, System.currentTimeMillis());
+                        }
+                        
+                        connections_cnt++;
+                        if (debug) {
+                            System.out.println(new Timestamp(System.currentTimeMillis()) 
+                                    + " - [CONN] - Client #" + connections_cnt 
+                                    + ": " + clientIP + " has connected securely.");
+                        }
+                        //Create, and start, a new thread that processes incoming connections
+                        executor.submit(new Connection(secure, debug, sClient, Server.secret, Server.hostname, Server.sPort));
+                    }                    
                 } catch (Exception exception) {
                     exception.printStackTrace();
                 }
@@ -194,18 +222,15 @@ public class Server {
             
             @Override
             public void run() {
+                
               //factory for server sockets
                 ServerSocketFactory factory = ServerSocketFactory.getDefault();
+                Boolean secure = false;
                 
                 //Create server socket that auto-closes, and bind to port
                 try (ServerSocket server = factory.createServerSocket(port)){
                     System.out.println(new Timestamp(System.currentTimeMillis()) 
                             + " - [INFO] - bound to port " + Server.port);
-                     
-                    //Set exchange schema
-                    TimerTask timerTask = new Exchanger();
-                    Timer timer = new Timer(true);
-                    timer.scheduleAtFixedRate(timerTask, 1, Server.exchangeIntervalLimit*1000);
                     
                     //Keep listening for connections...
                     //...and use a thread pool with of max number of threads
@@ -241,7 +266,7 @@ public class Server {
                                     + ": " + clientIP + " has connected.");
                         }
                         //Create, and start, a new thread that processes incoming connections
-                        executor.submit(new Connection(debug, client, Server.secret, Server.hostname, Server.port));
+                        executor.submit(new Connection(secure, debug, client, Server.secret, Server.hostname, Server.port));
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
