@@ -17,13 +17,13 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
 public class ServerList {
-	private static JSONArray serverList = new JSONArray(); //stores the list of servers
-	private static Integer MIN_PORT = 1024;    //0-1023 are reserved for system
-	private static Integer MAX_PORT = 65535;
+	private JSONArray serverList = new JSONArray(); //stores the list of servers
+	private Integer MIN_PORT = 1024;    //0-1023 are reserved for system
+	private Integer MAX_PORT = 65535;
 	
 	//Update current server list with an incoming list i.e. a union of the two lists
 	@SuppressWarnings("unchecked")
-	public synchronized static void update(JSONArray newList, String hostname, int hostport) 
+	public synchronized void update(JSONArray newList, String hostname, int hostport) 
 			throws ClassCastException, UnknownHostException, NumberFormatException, serverException {
 
 	    //For each server in incoming list
@@ -61,7 +61,7 @@ public class ServerList {
 	}
 	
 	//Select a random server from the list
-	public static synchronized JSONObject select() {
+	public synchronized JSONObject select() {
 	    if (serverList.size() > 0) {
 			int random = ThreadLocalRandom.current().nextInt(0, serverList.size());
 			JSONObject randomServer = (JSONObject) serverList.get(random);
@@ -70,15 +70,15 @@ public class ServerList {
 		return null;
 	}
 	
-	public static int getLength() {
+	public int getLength() {
 		return serverList.size();
 	}
 	
-	public static synchronized void remove(JSONObject server) {
+	public synchronized void remove(JSONObject server) {
 		serverList.remove(server);
 	}
 
-    public static JSONArray getCopyServerList() {
+    public JSONArray getCopyServerList() {
         if (serverList.size() > 0) return (JSONArray) serverList.clone();
         return null;
     }
