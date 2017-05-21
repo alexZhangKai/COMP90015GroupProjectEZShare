@@ -18,7 +18,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.commons.cli.CommandLine;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
+
 import org.json.simple.JSONArray;
 
 import org.json.simple.JSONObject;
@@ -27,28 +29,47 @@ import org.json.simple.parser.ParseException;
 
 public class Connection implements Runnable {
 	private static final int SECS_TO_TIMEOUT = 2;  //how long to wait for an open connection
-    private Socket client;
+    private Socket unsecClient;
+    private SSLSocket sClient;
 	private String serverSecret;
 	private Boolean debug;
+	private Boolean secure;
 	private String hostname;
 	private int port;
 	
-	public Connection(CommandLine cmd, Socket client, String secret, String hostname, int port) {
-		this.client = client;
+	public Connection(Boolean secure, Boolean debug, Socket client, String secret, String hostname, int port) {
+		this.unsecClient = client;
 		this.serverSecret = secret;
 		this.hostname = hostname;
-		this.debug = cmd.hasOption("debug") ? true : false;
+		this.debug = debug;
 		this.port = port;
+		this.secure = secure;
 	}
 	
-	@SuppressWarnings("unchecked")
+	public Connection(Boolean secure, Boolean debug, SSLSocket sClient, String secret, String hostname, int port) {
+	    this.sClient = sClient;
+        this.serverSecret = secret;
+        this.hostname = hostname;
+        this.debug = debug;
+        this.port = port;
+        this.secure = secure;
+    }
+
+    @SuppressWarnings("unchecked")
 	//JSONObject extends HashMap but does not have type parameters as HashMap would expect...
 	
     @Override
 	public void run() {
+        DataInputStream input = null;
+        DataOutputStream output = null;
 		try {
-			DataInputStream input = new DataInputStream(client.getInputStream());
-			DataOutputStream output = new DataOutputStream(client.getOutputStream());			
+		    if (secure) {
+		        input = new DataInputStream(sClient.getInputStream());
+		        output = new DataOutputStream(sClient.getOutputStream());
+            } else {
+                input = new DataInputStream(unsecClient.getInputStream());
+                output = new DataOutputStream(unsecClient.getOutputStream());
+            }						
 			JSONParser parser = new JSONParser();
 			
 			JSONObject client_request = (JSONObject) parser.parse(input.readUTF());
@@ -95,7 +116,6 @@ public class Connection implements Runnable {
 			reply.put("response", "error");
 			reply.put("errorMessage", "missing or incorrect type for command");
 			try {
-				DataOutputStream output = new DataOutputStream(client.getOutputStream());
 				output.writeUTF(reply.toJSONString());
 				if (debug) {
                     System.out.println(new Timestamp(System.currentTimeMillis()) 
@@ -104,7 +124,9 @@ public class Connection implements Runnable {
 			} catch (IOException e1) {
 				e1.printStackTrace();
 			}
-		}		
+		} //TODO add sockets closures now that they're not inside the TRY ()
+		// TODO JAR file containing keystores not accessible
+		// TODO Add socket timeout exceptions to all TRYs
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -135,6 +157,7 @@ public class Connection implements Runnable {
             JSONObject reply = new JSONObject();
             reply.put("response", "success");
             output.writeUTF(reply.toJSONString());
+            output.flush();
             if (debug) {
                 System.out.println(new Timestamp(System.currentTimeMillis())
                         + " - [DEBUG] - SENT: " + reply.toJSONString());
@@ -295,7 +318,14 @@ public class Connection implements Runnable {
                 List<Resource> relay_res_results = new ArrayList<Resource>();
                 if (client_request.containsKey("relay")) {
                     //only propagate when there are other servers in the list
-                    if ((Boolean)client_request.get("relay") && ServerList.getLength() > 0) {
+                    int serverListLength = 0;
+                    if (secure) {
+                        serverListLength = ServerListManager.getSecServerList().getLength();
+                    } else {
+                        serverListLength = ServerListManager.getUnsecServerList().getLength();
+                    }
+                    
+                    if ((Boolean)client_request.get("relay") && serverListLength > 0) {
                         relay_res_results = propagateQuery(client_request);
                         result_cnt += relay_res_results.size();
                     }
@@ -372,7 +402,12 @@ public class Connection implements Runnable {
         command.put("resourceTemplate", res);
 
         //for each server from server list
-        JSONArray serv_list = ServerList.getCopyServerList();
+        JSONArray serv_list = null;
+        if (secure) {
+            serv_list = ServerListManager.getSecServerList().getCopyServerList();
+        } else {
+            serv_list = ServerListManager.getUnsecServerList().getCopyServerList();
+        }
         for (int i = 0; i < serv_list.size(); i++) {
 
             //Get server details
@@ -382,14 +417,27 @@ public class Connection implements Runnable {
             
             //Send QUERY command to that server
             try {
-                Socket socket = new Socket(hostname, port);
-                socket.setSoTimeout(SECS_TO_TIMEOUT);
-                //Get I/O streams for connection
-                DataInputStream input = new DataInputStream(socket.getInputStream());
-                DataOutputStream output = new DataOutputStream(socket.getOutputStream());
+                SSLSocketFactory sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
+                SSLSocket sslsocket = null;
+                Socket unsecSocket = null;
+                DataInputStream input;
+                DataOutputStream output;
+                
+                if (secure){
+                    sslsocket = (SSLSocket) sslsocketfactory.createSocket(hostname, port);
+                  //Get I/O streams for connection
+                    input = new DataInputStream(sslsocket.getInputStream());
+                    output = new DataOutputStream(sslsocket.getOutputStream());
+                    sslsocket.setSoTimeout(SECS_TO_TIMEOUT*1000);
+                } else{
+                    unsecSocket = new Socket(hostname, port);
+                    input = new DataInputStream(unsecSocket.getInputStream());
+                    output = new DataOutputStream(unsecSocket.getOutputStream());
+                    unsecSocket.setSoTimeout(SECS_TO_TIMEOUT*1000);
+                }
                 
                 //record start time
-                long startTime = System.currentTimeMillis();
+//                long startTime = System.currentTimeMillis();
                 
                 //send request
                 output.writeUTF(command.toJSONString());
@@ -399,24 +447,35 @@ public class Connection implements Runnable {
                 }
                 output.flush();
                             
-                while (true) {
-                    if (input.available() > 0) {
-                        //get results and store in results list
-                        JSONObject temp_response = (JSONObject) parser.parse(input.readUTF());
-                        if (debug) {
-                            System.out.println(new Timestamp(System.currentTimeMillis())
-                                    + " - [DEBUG] - RECEIVED: " + temp_response);
+                String read;
+                while (true) {                    
+                    try {
+                        //TODO query command keeps looping with a SocketTimeOut exception
+                        if ((read = input.readUTF()) != null) {
+                            //get results and store in results list
+                            JSONObject temp_response = (JSONObject) parser.parse(read);
+                            if (debug) {
+                                System.out.println(new Timestamp(System.currentTimeMillis())
+                                        + " - [DEBUG] - RECEIVED: " + temp_response);
+                            }
+                            if (temp_response.containsKey("uri")) {
+                                Resource temp_res = this.JSONObj2Resource(temp_response);
+                                prop_results.add(temp_res);
+                            }
                         }
-                        if (temp_response.containsKey("uri")) {
-                            Resource temp_res = this.JSONObj2Resource(temp_response);
-                            prop_results.add(temp_res);
-                        }
-                    }
-                    if ((System.currentTimeMillis() - startTime) > SECS_TO_TIMEOUT*1000){
+                    } catch (SocketException e){    //when the other side closes the connection
                         break;
+                    } catch (SocketTimeoutException e){
+                        break;
+                    } catch (Exception e) {
+                        e.printStackTrace();
                     }
                 }
-                socket.close();
+                if (secure) {
+                    sslsocket.close();
+                } else {
+                    unsecSocket.close();
+                }
             } catch (ConnectException e) {
                 //If connection times out for a particular server, just move on
                 //...to the next one in the list. 
@@ -531,8 +590,15 @@ public class Connection implements Runnable {
             }
         }
         try {
+            ServerList sList = null;
+            if (secure){
+                sList = ServerListManager.getSecServerList();
+            } else {
+                sList = ServerListManager.getUnsecServerList();
+            }
+            
             //try to union the new and current list of servers
-            ServerList.update(newServerList, hostname, port);
+            sList.update(newServerList, hostname, port);
             
             JSONObject reply = new JSONObject();
             reply.put("response", "success");
