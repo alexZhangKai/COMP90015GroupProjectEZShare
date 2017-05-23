@@ -63,11 +63,6 @@ class Client {
         argOptions.put("share", false);
         argOptions.put("tags", true);
         argOptions.put("uri", true);
-        argOptions.put("subscribe", false);
-        argOptions.put("unsubscribe", false);
-        argOptions.put("relay", false);
-        argOptions.put("id", true);
-        
         
         //for testing a misbehaving client
         argOptions.put("invalidComm", false);
@@ -111,9 +106,7 @@ class Client {
         }
         
         debug = initCmd.hasOption("debug");
-        //TODO not sure what is "norelay", check with Ab
-        //relay = !initCmd.hasOption("norelay");
-        relay = initCmd.hasOption("relay");
+        relay = !initCmd.hasOption("norelay");
         secure = initCmd.hasOption("secure");
         if (secure && !initCmd.hasOption("port")) {
             port = sPort;
@@ -144,14 +137,6 @@ class Client {
             System.out.println(new Timestamp(System.currentTimeMillis()) 
                     + " - [FINE] - exchanging with " + ip + ":" + port);
             Client.ExchangeCmd(initCmd);
-        } else if(initCmd.hasOption("subscribe")) {
-        	 System.out.println(new Timestamp(System.currentTimeMillis()) 
-                     + " - [FINE] - subscribing at " + ip + ":" + port);
-             Client.SubscribeCmd(initCmd);
-        } else if(initCmd.hasOption("unsubscribe")) {
-        	 System.out.println(new Timestamp(System.currentTimeMillis()) 
-                     + " - [FINE] - unsubscribing from " + ip + ":" + port);
-             Client.UnsubscribeCmd(initCmd);
         } else if (initCmd.hasOption("invalidComm")) {
             Client.InvalidCmd();
         } else if (initCmd.hasOption("missingComm")) {
@@ -341,39 +326,11 @@ class Client {
         generalReply(command.toJSONString());
     }
     
-    private static int setChunkSize(long fileSizeRemaining) {
+    public static int setChunkSize(long fileSizeRemaining) {
         if(fileSizeRemaining < CHUNK_SIZE) {
             CHUNK_SIZE = (int) fileSizeRemaining;
         }
         return CHUNK_SIZE;
-    }
-    
-    @SuppressWarnings("unchecked")
-    private static void SubscribeCmd(CommandLine initCmd) {
-    	JSONObject command = new JSONObject();
-    	JSONObject resourceTemplate = createResJSONObj(initCmd);
-    	
-    	//Subscribe need a client defined id
-    	//TODO handle the situation that id is not given
-    	String id = initCmd.hasOption("id")?initCmd.getOptionValue("id"):"defaultId";
-    	
-    	command.put("command", "SUBSCRIBE");
-    	command.put("relay", relay);
-    	command.put("id",id);
-    	command.put("resourceTemplate", resourceTemplate);
-    	generalReply(command.toJSONString());
-    }
-    
-    @SuppressWarnings("unchecked")
-    private static void UnsubscribeCmd(CommandLine initCmd) {
-    	JSONObject command = new JSONObject();
-    	
-    	//Unsubscribe need a subscribe id
-    	String id = initCmd.hasOption("id")?initCmd.getOptionValue("id"):"defaultId";
-    	
-    	command.put("command", "UNSUBSCRIBE");
-    	command.put("id", id);
-    	generalReply(command.toJSONString());
     }
     
     @SuppressWarnings("unchecked")
@@ -428,7 +385,7 @@ class Client {
     }
     
     //Send JSON command to server
-    private static void generalReply(String request) {
+    public static void generalReply(String request) {
         
         try {
             SSLSocketFactory sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
@@ -493,11 +450,6 @@ class Client {
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
-    
-    //TODO create a method without socket timeout
-    private static void asynReply(String request) {
-    	
     }
     
     private static void PrintValidArgumentList() {
