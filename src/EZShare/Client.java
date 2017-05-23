@@ -460,11 +460,13 @@ class Client {
                         
             JSONParser parser = new JSONParser();
             String recv;
-            
+                        
             while(true) {
 //                if(input.available() > 0) {
                 try {
-                    if((recv = input.readUTF()) != null){
+                    //if((recv = input.readUTF()) != null){
+                	if(input.available() >0) {
+                		recv = input.readUTF();
                         JSONObject reply = (JSONObject) parser.parse(recv);
                         if (debug) {
                             System.out.println(new Timestamp(System.currentTimeMillis())
@@ -478,9 +480,11 @@ class Client {
                         }
                     }
                 } catch (SocketException e){    //socket closed on other end
+                	e.printStackTrace();
                     break;
                 } catch (SocketTimeoutException e){ //socket timed out
                     //TODO Add timeoutexception to all cases where "read = input.readUTF()) != null" is used
+                	e.printStackTrace();
                     break;
                 }
             }

@@ -12,6 +12,7 @@
 
 package EZShare;
 
+import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,7 +30,7 @@ public class ResourceList {
 	}
 	
 	//thread safe because of "synchronized"
-	public static void addResource(Resource newResource) throws serverException {
+	public static void addResource(Resource newResource) throws serverException, IOException {
 		//Check if resource already exists with same channel and URI
 		Resource match = queryForChannelURI(newResource);
 		
@@ -50,6 +51,10 @@ public class ResourceList {
 			if (!modifyReourceList(false, match) || !modifyReourceList(true, newResource)) 
 				throw new serverException("cannot publish resource");
 		}
+		
+		//Check subscription if match
+		System.out.println("call subscription manager to check match");
+		SubscriptionManager.allSubMatch();
 	}
 	
 	public static void removeResource(Resource oldResource) throws serverException {

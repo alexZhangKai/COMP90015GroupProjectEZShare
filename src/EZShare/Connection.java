@@ -99,6 +99,9 @@ public class Connection implements Runnable {
 			case "EXCHANGE":
                 exchange(client_request, output);
                 break;
+			case "SUBSCRIBE":
+				subscribe(client_request, unsecClient);
+				break;
 			default:
 				JSONObject reply = new JSONObject();
 				reply.put("response", "error");
@@ -621,6 +624,23 @@ public class Connection implements Runnable {
         }
     }
 	
+    private void subscribe(JSONObject client_request, Socket client) {
+    	Resource in_res;
+        JSONParser parser = new JSONParser();
+        
+        // The following should throw an invalid resource exception
+        try {
+			in_res = this.JSONObj2Resource((JSONObject) 
+			        parser.parse(client_request.get("resourceTemplate").toString()));
+			String id = client_request.get("id").toString();
+			Subscription newSub = new Subscription(in_res, client, id);
+			SubscriptionManager.addSubscription(newSub);
+		} catch (serverException | ParseException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+    }
+    
     //Convert incoming resource (in JSON format) into a Resource object
 	private Resource JSONObj2Resource(JSONObject resource) throws serverException {
 		//handle 3 potential cases for most fields:
@@ -701,7 +721,7 @@ public class Connection implements Runnable {
 	
 	//Reverse of the above; convert Resource object to JSON
 	@SuppressWarnings("unchecked")
-    private JSONObject Resource2JSONObject(Resource resource) {
+    public static JSONObject Resource2JSONObject(Resource resource) {
         JSONObject jobj = new JSONObject();
 
         jobj.put("name", resource.getName());
