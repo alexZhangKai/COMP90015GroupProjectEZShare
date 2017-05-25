@@ -358,7 +358,7 @@ class Client {
     	String id = initCmd.hasOption("id")?initCmd.getOptionValue("id"):"defaultId";
     	
     	command.put("command", "SUBSCRIBE");
-    	command.put("relay", relay);
+    	command.put("relay", true);
     	command.put("id",id);
     	command.put("resourceTemplate", resourceTemplate);
     	generalReply(command.toJSONString());

@@ -39,6 +39,8 @@ public class ResourceList {
 		    //...then add it.
 			if (!modifyReourceList(true, newResource)) {
 				throw new serverException("cannot publish resource");
+			} else {
+				SubscriptionManager.allSubMatch(newResource);
 			}
 			//otherwise...
 		} else { 

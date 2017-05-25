@@ -651,7 +651,7 @@ public class Connection implements Runnable {
 			//Create relay/no-relay subscription
 			Subscription newSub = null;
 			if(relay) {
-				JSONArray serv_list = ServerListManager.getSecServerList().getCopyServerList();
+				JSONArray serv_list = ServerListManager.getUnsecServerList().getCopyServerList();
 				List<Socket> relaySocList = new ArrayList<Socket>();
 				if(serv_list != null) {
 					for (int i = 0; i < serv_list.size(); i++) {

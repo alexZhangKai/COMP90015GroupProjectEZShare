@@ -19,7 +19,7 @@ public class Subscription {
 	private List<Resource> resourceTemplate = new ArrayList<Resource>();
 	private DataOutputStream sendToClient;
 	private String id;
-	private List<Socket> relaySocList;
+	private List<Socket> relaySocList = new ArrayList<Socket>();
 	private List<ListenRelay> listenRelayList = new ArrayList<ListenRelay>();
 	private int resultCount = 0;
 	
@@ -158,6 +158,7 @@ class ListenRelay extends Thread{
 		this.sendToClient = sendToClient;
 		this.server = server;
 		this.template = template;
+		this.id = id;
 	}
 
 	public void setNewTemplateFlag(Resource newTemplate) {
