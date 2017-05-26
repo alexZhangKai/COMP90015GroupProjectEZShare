@@ -199,7 +199,9 @@ class ListenRelay extends Thread{
 				//TODO change to...
 				if(serverReply.available() > 0) {
 					String result = serverReply.readUTF();
-					this.sendToClient.writeUTF(result);
+					if(!result.contains("response") && !result.contains("success")) {
+						this.sendToClient.writeUTF(result);
+					}
 				}
 				
 				if(this.newTemplateFlag) {

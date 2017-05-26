@@ -45,8 +45,9 @@ class Client {
     private static Boolean debug = false; //verbose output
     private static Boolean secure = false;
     private static final int TIMEOUT_SECS = 10;
-    private static Boolean relay = false; //For disabling relay to other servers when querying
+    private static Boolean relay = true;
     private static int CHUNK_SIZE = 1024*1024;
+    private static String subId = "defaultID";
     
     private static final Map<String, Boolean> argOptions;
     static{
@@ -69,11 +70,7 @@ class Client {
         argOptions.put("share", false);
         argOptions.put("tags", true);
         argOptions.put("uri", true);
-        argOptions.put("subscribe", false);
-        argOptions.put("unsubscribe", false);
-        argOptions.put("relay", false);
-        argOptions.put("id", true);
-        
+        argOptions.put("subscribe", false);        
         
         //for testing a misbehaving client
         argOptions.put("invalidComm", false);
@@ -117,9 +114,6 @@ class Client {
         }
         
         debug = initCmd.hasOption("debug");
-        //TODO not sure what is "norelay", check with Ab
-        //relay = !initCmd.hasOption("norelay");
-        relay = initCmd.hasOption("relay");
         secure = initCmd.hasOption("secure");
         if (secure && !initCmd.hasOption("port")) {
             port = sPort;
@@ -251,7 +245,6 @@ class Client {
             JSONParser JSONparser = new JSONParser();
             String result;
             while(true) {
-//            	if(input.available() > 0) {
                 try {
                     if((result = input.readUTF()) != null){
                     	if (debug) {
@@ -355,13 +348,9 @@ class Client {
     	JSONObject command = new JSONObject();
     	JSONObject resourceTemplate = createResJSONObj(initCmd);
     	
-    	//Subscribe need a client defined id
-    	//TODO handle the situation that id is not given
-    	String id = initCmd.hasOption("id")?initCmd.getOptionValue("id"):"defaultId";
-    	
     	command.put("command", "SUBSCRIBE");
-    	command.put("relay", true);
-    	command.put("id",id);
+    	command.put("relay", relay);
+    	command.put("id",subId);
     	command.put("resourceTemplate", resourceTemplate);
     	subReply(command.toJSONString());
     }
@@ -488,7 +477,8 @@ class Client {
         }
     }
     
-    private static void subReply(String request) {
+    @SuppressWarnings("unchecked")
+	private static void subReply(String request) {
     	try {
             SSLSocketFactory sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
             SSLSocket sslsocket = null;
@@ -518,6 +508,16 @@ class Client {
                         + " - [DEBUG] - SENT: " + request);
             }
             
+            Thread ListenConsole = new Thread(new Runnable() {
+
+				@Override
+				public void run() {
+					Scanner sc = new Scanner(System.in);
+					sc.nextLine();
+				}
+            	
+            });
+            ListenConsole.start();
             
             String recv;            
             while(true) {
@@ -535,6 +535,18 @@ class Client {
                             break;
                         }
                     }
+                    
+                    //Listen console input
+                    if(!ListenConsole.isAlive()) {
+                    	//send unsubscribe command
+                    	JSONObject command = new JSONObject();
+                    	command.put("command", "UNSUBSCRIBE");
+                    	command.put("id", subId);
+                    	output.writeUTF(command.toJSONString());
+                    	
+                    	break;
+                    }
+                    
                 } catch (SocketException e){    //socket closed on other end
                 	e.printStackTrace();
                     break;

@@ -16,18 +16,7 @@ public class SubscriptionManager {
 	private static List<Subscription> subList = new ArrayList<Subscription>();
 	
 	public static synchronized void addSubscription(Subscription newSub) {
-		if(checkSubId(newSub.getId())) {
 			subList.add(newSub);
-		}
-	}
-	
-	public static boolean checkSubId(String newId) {
-		for(Subscription sub : subList) {
-			if(sub.getId().equals(newId)) {
-				return false;
-			}
-		}
-		return true;
 	}
 	
 	public static void allSubMatch(Resource newRes) throws IOException {
