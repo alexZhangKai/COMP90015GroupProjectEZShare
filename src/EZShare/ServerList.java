@@ -25,6 +25,7 @@ public class ServerList {
 	@SuppressWarnings("unchecked")
 	public synchronized void update(JSONArray newList, String hostname, int hostport) 
 			throws ClassCastException, UnknownHostException, NumberFormatException, serverException {
+		JSONArray realNewServerList = new JSONArray();
 
 	    //For each server in incoming list
 	    for (Object newServerObject : newList) {
@@ -56,8 +57,14 @@ public class ServerList {
 	            }
 			}
 			
-			if (safeToAdd) serverList.add(newServerJSON);
-		}		
+			if (safeToAdd) {
+				serverList.add(newServerJSON);
+				realNewServerList.add(newServerJSON);
+			}
+		}
+	    
+	    //notify subscription manager about new servers
+	    SubscriptionManager.newServerCome(realNewServerList);
 	}
 	
 	//Select a random server from the list

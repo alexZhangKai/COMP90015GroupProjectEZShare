@@ -39,7 +39,7 @@ public class Server {
     private static long connectionIntervalLimit = 1*1000;   //milliseconds
     private static long exchangeIntervalLimit = 30;   //seconds
     private static final long GAP_BETW_EXCHANGERS = 2000;  //MS; so that both exchangers have a gap
-    
+
     //max number of concurrent client connections allowed
     private static final int MAX_THREADS = 10;
     

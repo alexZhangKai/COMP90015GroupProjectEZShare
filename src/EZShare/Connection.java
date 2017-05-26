@@ -105,6 +105,9 @@ public class Connection implements Runnable {
 			case "EXCHANGE":
                 exchange(client_request, output);
                 break;
+			case "SUBSCRIBE":
+				subscribe(client_request, unsecClient);
+				break;
 			default:
 				JSONObject reply = new JSONObject();
 				reply.put("response", "error");
@@ -645,6 +648,91 @@ public class Connection implements Runnable {
         }
     }
 	
+    @SuppressWarnings("unchecked")
+	private void subscribe(JSONObject client_request, Socket client) {
+    	Resource in_res;
+        JSONParser parser = new JSONParser();
+        
+        //Client Input/Output Stream
+        DataInputStream receiveFromClient;
+        DataOutputStream sendToClient;
+        
+        // The following should throw an invalid resource exception
+        try {
+        	receiveFromClient = new DataInputStream(client.getInputStream());
+        	sendToClient = new DataOutputStream(client.getOutputStream());
+        	
+			in_res = this.JSONObj2Resource((JSONObject) 
+			        parser.parse(client_request.get("resourceTemplate").toString()));
+			String id = client_request.get("id").toString();
+			Boolean relay = (Boolean) client_request.containsKey("relay");
+			
+			JSONObject reply = new JSONObject();
+			reply.put("response", "success");
+			reply.put("id", id);
+			sendToClient.writeUTF(reply.toJSONString());
+			
+			//Create relay/no-relay subscription
+			Subscription newSub = null;
+			if(relay) {
+				JSONArray serv_list = ServerListManager.getUnsecServerList().getCopyServerList();
+				List<Socket> relaySocList = new ArrayList<Socket>();
+				if(serv_list != null) {
+					for (int i = 0; i < serv_list.size(); i++) {
+						//Get server details
+						JSONObject server = (JSONObject)serv_list.get(i);
+						String hostname = (String) server.get("hostname");
+						int port = Integer.parseInt(server.get("port").toString());
+
+						//TODO switch to secure connection
+						//SSLSocketFactory sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
+						//SSLSocket sslsocket = (SSLSocket) sslsocketfactory.createSocket(hostname, port);
+						relaySocList.add(new Socket(hostname, port));
+					}
+					newSub = new Subscription(in_res, sendToClient, id, relaySocList);
+					//Start subscribe relay
+					newSub.ListenSubscribeRelay();
+				}
+				newSub = new Subscription(in_res, sendToClient, id);
+			} else {
+				newSub = new Subscription(in_res, sendToClient, id);
+			}
+			
+			//match resource with existing resources
+			newSub.matchResource();
+			//add to subscription manager to match new resource
+			SubscriptionManager.addSubscription(newSub);
+			
+			//Keep listening from client
+			while(true) {
+				if(receiveFromClient.available() > 0) {
+					JSONObject newClientRequest = (JSONObject) parser.parse(receiveFromClient.readUTF());
+					String command = newClientRequest.get("command").toString();
+					if(command.equals("SUBSCRIBE")) {
+						in_res = this.JSONObj2Resource((JSONObject) 
+						        parser.parse(client_request.get("resourceTemplate").toString()));
+						newSub.getNewTemplate(in_res);
+						
+					} else if (command.equals("UNSUBSCRIBE")) {
+						int totalResultSize = newSub.unsubscribe();
+						
+						reply = new JSONObject();
+						reply.put("resultSize", totalResultSize);
+					} else {
+						//TODO throw exception here
+					}
+					
+				}
+			}
+			
+		} catch (serverException | ParseException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+    }
+    
     //Convert incoming resource (in JSON format) into a Resource object
 	private Resource JSONObj2Resource(JSONObject resource) throws serverException {
 		//handle 3 potential cases for most fields:
@@ -725,7 +813,7 @@ public class Connection implements Runnable {
 	
 	//Reverse of the above; convert Resource object to JSON
 	@SuppressWarnings("unchecked")
-    private JSONObject Resource2JSONObject(Resource resource) {
+    public static JSONObject Resource2JSONObject(Resource resource) {
         JSONObject jobj = new JSONObject();
 
         jobj.put("name", resource.getName());

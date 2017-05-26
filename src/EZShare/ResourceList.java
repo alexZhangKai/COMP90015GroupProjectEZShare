@@ -12,6 +12,7 @@
 
 package EZShare;
 
+import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,7 +30,7 @@ public class ResourceList {
 	}
 	
 	//thread safe because of "synchronized"
-	public static void addResource(Resource newResource) throws serverException {
+	public static void addResource(Resource newResource) throws serverException, IOException {
 		//Check if resource already exists with same channel and URI
 		Resource match = queryForChannelURI(newResource);
 		
@@ -38,6 +39,8 @@ public class ResourceList {
 		    //...then add it.
 			if (!modifyReourceList(true, newResource)) {
 				throw new serverException("cannot publish resource");
+			} else {
+				SubscriptionManager.allSubMatch(newResource);
 			}
 			//otherwise...
 		} else { 
@@ -46,10 +49,21 @@ public class ResourceList {
 			if (!match.getOwner().equals(newResource.getOwner()))
 				throw new serverException("cannot publish resource");
 			
+			// TODO have to check separately in subscribe
 			   //...else: remove existing resource with that PK and add new one 
-			if (!modifyReourceList(false, match) || !modifyReourceList(true, newResource)) 
+			//if (!modifyReourceList(false, match) || !modifyReourceList(true, newResource)) 
+				//throw new serverException("cannot publish resource");
+			
+			if(!modifyReourceList(false, match))
 				throw new serverException("cannot publish resource");
+			
+			if(modifyReourceList(true, newResource)){
+				SubscriptionManager.allSubMatch(newResource);
+			} else {
+				throw new serverException("cannot publish resource");
+			}
 		}
+		
 	}
 	
 	public static void removeResource(Resource oldResource) throws serverException {
@@ -116,6 +130,19 @@ public class ResourceList {
             }
         }
         return results;
+    }
+    
+    public static boolean queryingForSubscription(Resource template, Resource curr_res) {
+    	if (template.getChannel().equals(curr_res.getChannel()) && 
+                compareOwner(template.getOwner(), curr_res.getOwner()) &&
+                compareTags(template.getTags(), curr_res.getTags()) &&
+                compareUri(template.getUri(), curr_res.getUri()) &&
+                curr_res.getName().contains(template.getName()) &&
+                curr_res.getDescription().contains(template.getDescription())) 
+        {
+    		return true;
+        }
+    	return false;
     }
     
     private static boolean compareOwner(String in_owner, String curr_owner) {
