@@ -108,7 +108,20 @@ public class Connection implements Runnable {
                     System.out.println(new Timestamp(System.currentTimeMillis())
                             + " - [DEBUG] - SENT: " + reply.toJSONString());
                 }
+				
+    			if (secure){sClient.close();}
+    	        else {unsecClient.close();}
 			}	
+		} catch (SocketException e){
+		    if (debug) {
+                System.out.println(new Timestamp(System.currentTimeMillis())
+                        +" - [FINE] - (Run) Connection closed by server.");
+            }
+		} catch (SocketTimeoutException e) {
+		    if (debug) {
+                System.out.println(new Timestamp(System.currentTimeMillis())
+                        +" - [FINE] - (Run) Connection timed out.");
+            }
 		} catch (IOException e) {
 		    e.printStackTrace();
 		} catch (ParseException | ClassCastException e) {
@@ -124,9 +137,9 @@ public class Connection implements Runnable {
 			} catch (IOException e1) {
 				e1.printStackTrace();
 			}
-		} //TODO add sockets closures now that they're not inside the TRY ()
+		} 
 		// TODO JAR file containing keystores not accessible
-		// TODO Add socket timeout exceptions to all TRYs
+
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -464,18 +477,23 @@ public class Connection implements Runnable {
                             }
                         }
                     } catch (SocketException e){    //when the other side closes the connection
+                        if (debug) {
+                            System.out.println(new Timestamp(System.currentTimeMillis())
+                                    +" - [FINE] - (Propagate Query) Connection closed by server.");
+                        }
                         break;
                     } catch (SocketTimeoutException e){
+                        if (debug) {
+                            System.out.println(new Timestamp(System.currentTimeMillis())
+                                    +" - [FINE] - (Propagate Query) Connection timed out.");
+                        }
                         break;
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
                 }
-                if (secure) {
-                    sslsocket.close();
-                } else {
-                    unsecSocket.close();
-                }
+                if (secure) {sslsocket.close();} 
+                else {unsecSocket.close();}
             } catch (ConnectException e) {
                 //If connection times out for a particular server, just move on
                 //...to the next one in the list. 

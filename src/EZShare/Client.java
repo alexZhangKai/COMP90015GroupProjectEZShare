@@ -33,6 +33,10 @@ import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
 class Client {
+    
+    //TODO Unsubscribe -> Add separate thread to listen to terminal input;
+    // callback to unsubscribe when 'enter' is pressed
+    
     private static String ip = "localhost";
     private static int port = 3780;
     private static int sPort = 3781;
@@ -297,8 +301,16 @@ class Client {
 //                        break;
 //                    }
                 } catch (SocketException e){    //connection closed
+                    if (debug) {
+                        System.out.println(new Timestamp(System.currentTimeMillis())
+                                +" - [FINE] - (Fetch) Connection closed by server.");
+                    }
                     break;
                 } catch (SocketTimeoutException e){ //socket has timed out
+                    if (debug) {
+                        System.out.println(new Timestamp(System.currentTimeMillis())
+                                +" - [FINE] - (Fetch) Connection timed out.");
+                    }
                     break;
                 }
             }
@@ -435,9 +447,16 @@ class Client {
                         }
                     }
                 } catch (SocketException e){    //socket closed on other end
+                    if (debug) {
+                        System.out.println(new Timestamp(System.currentTimeMillis())
+                                +" - [FINE] - (General Reply) Connection closed by server.");
+                    }
                     break;
                 } catch (SocketTimeoutException e){ //socket timed out
-                    //TODO Add timeoutexception to all cases where "read = input.readUTF()) != null" is used
+                    if (debug) {
+                        System.out.println(new Timestamp(System.currentTimeMillis())
+                                +" - [FINE] - (General Reply) Connection timed out.");
+                    }
                     break;
                 }
             }

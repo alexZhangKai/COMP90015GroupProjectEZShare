@@ -49,7 +49,7 @@ public class Exchanger extends TimerTask{
                 
                 SSLSocketFactory sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
                 SSLSocket sslsocket = null;
-                Socket socket = null;
+                Socket unsecSocket = null;
                 DataInputStream input;
                 DataOutputStream output;
                 
@@ -60,10 +60,10 @@ public class Exchanger extends TimerTask{
                     output = new DataOutputStream(sslsocket.getOutputStream());
                     sslsocket.setSoTimeout(Server.SOCKET_TIMEOUT_MS);
                 } else{
-                    socket = new Socket(ip, port);
-                    input = new DataInputStream(socket.getInputStream());
-                    output = new DataOutputStream(socket.getOutputStream());
-                    socket.setSoTimeout(Server.SOCKET_TIMEOUT_MS);
+                    unsecSocket = new Socket(ip, port);
+                    input = new DataInputStream(unsecSocket.getInputStream());
+                    output = new DataOutputStream(unsecSocket.getOutputStream());
+                    unsecSocket.setSoTimeout(Server.SOCKET_TIMEOUT_MS);
                 }
                 
                 JSONObject command = new JSONObject();
@@ -93,11 +93,23 @@ public class Exchanger extends TimerTask{
                             }
                         }
                     } catch (SocketException e) {
+                        if (Server.debug) {
+                            System.out.println(new Timestamp(System.currentTimeMillis())
+                                    +" - [FINE] - (Exchanger) Connection closed by server.");
+                        }
                         break;
                     } catch (SocketTimeoutException e){ //socket timed out
+                        if (Server.debug) {
+                            System.out.println(new Timestamp(System.currentTimeMillis())
+                                    +" - [FINE] - (Exchanger) Connection timed out.");
+                        }
                         break;
                     }
                 }
+                
+                if (secure){sslsocket.close();}
+                else {unsecSocket.close();}
+                
             } catch (ConnectException e) {
                 System.out.println(new Timestamp(System.currentTimeMillis())
                         + " - [ERROR] - Connection timed out.");
