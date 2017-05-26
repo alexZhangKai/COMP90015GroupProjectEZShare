@@ -1,16 +1,9 @@
 package EZShare;
 
 import java.io.*;
-import java.net.*;
-import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
 import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
 
 public class SubscriptionManager {
 	private static List<Subscription> subList = new ArrayList<Subscription>();
@@ -25,9 +18,11 @@ public class SubscriptionManager {
 		}
 	}
 	
-	public static void newServerCome(JSONArray newServerList) {
+	public static void newServerCome(JSONArray newServerList, Boolean secure) {
 		for(Subscription sub : subList) {
-			sub.newRelay(newServerList);
+			if (sub.getSecure() == secure && sub.getRelay()){
+			    sub.newRelay(newServerList);
+			}
 		}
 	}
 	

@@ -2,12 +2,9 @@ package EZShare;
 
 import java.io.*;
 import java.net.*;
-import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
-import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
 import org.json.simple.JSONArray;
@@ -19,24 +16,32 @@ public class Subscription {
 	private List<Resource> resourceTemplate = new ArrayList<Resource>();
 	private DataOutputStream sendToClient;
 	private String id;
-	private List<Socket> relaySocList = new ArrayList<Socket>();
+	private List<Socket> relaySocList = null;
 	private List<ListenRelay> listenRelayList = new ArrayList<ListenRelay>();
 	private int resultCount = 0;
-	
-	public Subscription(Resource resourceTemplate, DataOutputStream sendToClient, String id) {
+	private Boolean secure = false;
+	private Boolean relay = false;
+
+    // Relay specified by client
+    public Subscription(Resource resourceTemplate, DataOutputStream sendToClient, 
+	        String id, List<Socket> relaySocList, Boolean secure, Boolean relay) {
 		this.resourceTemplate.add(resourceTemplate);
 		this.sendToClient = sendToClient;
 		this.id = id;
-	}
-	
-	public Subscription(Resource resourceTemplate, DataOutputStream sendToClient, String id, List<Socket> relaySocList) {
-		this.resourceTemplate.add(resourceTemplate);
-		this.sendToClient = sendToClient;
-		this.id = id;
+		this.secure = secure;
 		this.relaySocList = relaySocList;
+		this.relay = relay;
 	}
-	
-	void matchNewResource(Resource newRes) throws IOException {
+
+	// No relay specified by client
+	public Subscription(Resource resourceTemplate, DataOutputStream sendToClient, String id, Boolean relay) {
+	    this.resourceTemplate.add(resourceTemplate);
+        this.sendToClient = sendToClient;
+        this.id = id;
+        this.relay = relay;
+    }
+
+    void matchNewResource(Resource newRes) throws IOException {
 		//Check if match any template
         for(Resource template : resourceTemplate) {
         	if(ResourceList.queryingForSubscription(template, newRes)){
@@ -46,7 +51,7 @@ public class Subscription {
         
         JSONObject resource_temp = Connection.Resource2JSONObject(newRes); 
         sendToClient.writeUTF(resource_temp.toJSONString());
-        //TODO handle debug here
+        //TODO Output ALL readUTF and writeUTF strings when debug == true
         
 	}
 	
@@ -63,12 +68,7 @@ public class Subscription {
         for (Resource res: res_results){
             JSONObject resource_temp = Connection.Resource2JSONObject(res); 
             sendToClient.writeUTF(resource_temp.toJSONString());
-            //TODO handle debug here
         }
-	}
-	
-	public String getId() {
-		return this.id;
 	}
 
 	public void getNewTemplate(Resource newResTemplate) {
@@ -132,17 +132,31 @@ public class Subscription {
 				String newHostname = (String) newServerJSON.get("hostname");
 				int newPort = Integer.parseInt(newServerJSON.get("port").toString());
 				
-				Socket newRelay = new Socket(newHostname, newPort);
-				this.relaySocList.add(newRelay);
+				SSLSocketFactory sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
+                Socket newRelay = null;
+				if (secure) {
+				    newRelay = sslsocketfactory.createSocket(newHostname, newPort);
+                } else {
+                    newRelay = new Socket(newHostname, newPort); 
+                }
+				
+				relaySocList.add(newRelay);
 
-				ListenRelay listenRelay = new ListenRelay(sendToClient, newRelay, resourceTemplate, this.id);
-				this.listenRelayList.add(listenRelay);
+				ListenRelay listenRelay = new ListenRelay(sendToClient, newRelay, resourceTemplate, id);
+				listenRelayList.add(listenRelay);
 				listenRelay.start();
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
+	public Boolean getSecure() {
+        return secure;
+    }
+
+    public Boolean getRelay() {
+        return relay;
+    }
 }
 
 class ListenRelay extends Thread{
@@ -194,18 +208,16 @@ class ListenRelay extends Thread{
 
 				sendToServer.writeUTF(command.toJSONString());
 			}
-			
+			String result;
 			while(true) {
-				//TODO change to...
-				if(serverReply.available() > 0) {
-					String result = serverReply.readUTF();
+				if((result = serverReply.readUTF()) != null) {
 					if(!result.contains("response") && !result.contains("success")) {
-						this.sendToClient.writeUTF(result);
+						sendToClient.writeUTF(result);
 					}
 				}
 				
-				if(this.newTemplateFlag) {
-					//TODO send new subscribe command here
+				if(newTemplateFlag) {
+					//TODO ?? send new subscribe command here
 					command = new JSONObject();
 			    	resourceTemplate = Connection.Resource2JSONObject(this.newTemplate);
 			    	

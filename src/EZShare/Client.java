@@ -1,6 +1,6 @@
 /*
  * Distributed Systems
- * Group Project 1
+ * Group Project 2
  * Sem 1, 2017
  * Group: AALT
  *
@@ -9,10 +9,8 @@
 
 package EZShare;
 
-import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.InputStreamReader;
 import java.io.RandomAccessFile;
 import java.net.Socket;
 import java.net.SocketException;
@@ -28,8 +26,6 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 
-import javafx.util.Callback;
-
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -38,17 +34,19 @@ import java.util.Scanner;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
-class Client {
-    
-    //TODO Unsubscribe -> Add separate thread to listen to terminal input;
-    // callback to unsubscribe when 'enter' is pressed
+class Client {    
+    // Normal timeout duration for closing non-persistent connections
+    private static final int SOCKET_NORM_TIMEOUT_S = 2*1000;    //ms
+  
+  // Timeout duration for connection that should stay open for long
+    private static final int SOCKET_LONG_TIMEOUT_S = 600*1000;    //ms
     
     private static String ip = "localhost";
     private static int port = 3780;
     private static int sPort = 3781;
     private static Boolean debug = false; //verbose output
     private static Boolean secure = false;
-    private static final int TIMEOUT_SECS = 10;
+//    private static final int TIMEOUT_SECS = 10;
     private static Boolean relay = true;
     private static int CHUNK_SIZE = 1024*1024;
     private static String subId = "defaultID";
@@ -231,12 +229,12 @@ class Client {
               //Get I/O streams for connection
                 input = new DataInputStream(sslsocket.getInputStream());
                 output = new DataOutputStream(sslsocket.getOutputStream());
-                sslsocket.setSoTimeout(TIMEOUT_SECS*1000);
+                sslsocket.setSoTimeout(SOCKET_NORM_TIMEOUT_S);
             } else{
                 unsecSocket = new Socket(ip, port);
                 input = new DataInputStream(unsecSocket.getInputStream());
                 output = new DataOutputStream(unsecSocket.getOutputStream());
-                unsecSocket.setSoTimeout(TIMEOUT_SECS*1000);
+                unsecSocket.setSoTimeout(SOCKET_LONG_TIMEOUT_S);
             }            
             //send request
             output.writeUTF(command.toJSONString());
@@ -323,6 +321,11 @@ class Client {
                     }
                     break;
                 }
+            }
+            if (secure) {
+                sslsocket.close();
+            } else {
+                unsecSocket.close();
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -428,18 +431,16 @@ class Client {
             DataInputStream input;
             DataOutputStream output;
             JSONParser parser = new JSONParser();
-            InputStreamReader fileInputStream=new InputStreamReader(System.in);
-            BufferedReader bufferedReader=new BufferedReader(fileInputStream);
             
             if (secure){
                 sslsocket = (SSLSocket) sslsocketfactory.createSocket(ip, port);
               //Get I/O streams for connection
                 input = new DataInputStream(sslsocket.getInputStream());
                 output = new DataOutputStream(sslsocket.getOutputStream());
-                sslsocket.setSoTimeout(TIMEOUT_SECS*1000);
+                sslsocket.setSoTimeout(SOCKET_NORM_TIMEOUT_S);
             } else{
                 unsecSocket = new Socket(ip, port);
-                unsecSocket.setSoTimeout(TIMEOUT_SECS*1000);
+                unsecSocket.setSoTimeout(SOCKET_NORM_TIMEOUT_S);
                 input = new DataInputStream(unsecSocket.getInputStream());
                 output = new DataOutputStream(unsecSocket.getOutputStream());
             }
@@ -470,11 +471,16 @@ class Client {
                     }
                     
                 } catch (SocketException e){    //socket closed on other end
-                	e.printStackTrace();
+                    if (debug) {
+                        System.out.println(new Timestamp(System.currentTimeMillis())
+                                +" - [FINE] - (General Reply) Connection closed by server.");
+                    }
                     break;
                 } catch (SocketTimeoutException e){ //socket timed out
-                    //TODO Add timeoutexception to all cases where "read = input.readUTF()) != null" is used
-                	e.printStackTrace();
+                    if (debug) {
+                        System.out.println(new Timestamp(System.currentTimeMillis())
+                                +" - [FINE] - (General Reply) Connection closed.");
+                    }
                     break;
                 }
             }
@@ -504,10 +510,10 @@ class Client {
               //Get I/O streams for connection
                 input = new DataInputStream(sslsocket.getInputStream());
                 output = new DataOutputStream(sslsocket.getOutputStream());
-                sslsocket.setSoTimeout(TIMEOUT_SECS*1000);
+                sslsocket.setSoTimeout(SOCKET_LONG_TIMEOUT_S);
             } else{
                 unsecSocket = new Socket(ip, port);
-                unsecSocket.setSoTimeout(TIMEOUT_SECS*1000);
+                unsecSocket.setSoTimeout(SOCKET_LONG_TIMEOUT_S);
                 input = new DataInputStream(unsecSocket.getInputStream());
                 output = new DataOutputStream(unsecSocket.getOutputStream());
             }
@@ -526,11 +532,14 @@ class Client {
 				public void run() {
 					Scanner sc = new Scanner(System.in);
 					sc.nextLine();
+					sc.close();
 				}
             	
             });
             ListenConsole.start();
-            
+            // TODO create new thread for readUTF blocking
+            // ...another thread for terminal input blocking??
+            //ListenConsole.join();
             String recv;            
             while(true) {
                 try {

@@ -43,12 +43,6 @@ public class Server {
     //max number of concurrent client connections allowed
     private static final int MAX_THREADS = 10;
     
-    // Normal timeout duration for closing non-persistent connections
-//    private static final int SOCKET_NORM_TIMEOUT_MS = 2*1000;    //ms
-    
-    // Timeout duration for connection that should stay open for long
-//    private static final int SOCKET_LONG_TIMEOUT_MS = 600*1000;    //ms
-    
     private static String hostname;
     private static Boolean debug = false;
     
