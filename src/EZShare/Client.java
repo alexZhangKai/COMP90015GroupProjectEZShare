@@ -9,8 +9,10 @@
 
 package EZShare;
 
+import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.InputStreamReader;
 import java.io.RandomAccessFile;
 import java.net.Socket;
 import java.net.SocketException;
@@ -25,9 +27,13 @@ import org.apache.commons.cli.ParseException;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
+
+import javafx.util.Callback;
+
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Scanner;
 
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
@@ -38,7 +44,7 @@ class Client {
     private static int sPort = 3781;
     private static Boolean debug = false; //verbose output
     private static Boolean secure = false;
-    private static final int TIMEOUT_SECS = 3;
+    private static final int TIMEOUT_SECS = 10;
     private static Boolean relay = false; //For disabling relay to other servers when querying
     private static int CHUNK_SIZE = 1024*1024;
     
@@ -148,10 +154,6 @@ class Client {
         	 System.out.println(new Timestamp(System.currentTimeMillis()) 
                      + " - [FINE] - subscribing at " + ip + ":" + port);
              Client.SubscribeCmd(initCmd);
-        } else if(initCmd.hasOption("unsubscribe")) {
-        	 System.out.println(new Timestamp(System.currentTimeMillis()) 
-                     + " - [FINE] - unsubscribing from " + ip + ":" + port);
-             Client.UnsubscribeCmd(initCmd);
         } else if (initCmd.hasOption("invalidComm")) {
             Client.InvalidCmd();
         } else if (initCmd.hasOption("missingComm")) {
@@ -244,7 +246,7 @@ class Client {
                 System.out.println(new Timestamp(System.currentTimeMillis())
                         +" - [DEBUG] - SENT: " + command);
             }
-            output.flush();
+            output.flush();            
             
             JSONParser JSONparser = new JSONParser();
             String result;
@@ -361,19 +363,7 @@ class Client {
     	command.put("relay", true);
     	command.put("id",id);
     	command.put("resourceTemplate", resourceTemplate);
-    	generalReply(command.toJSONString());
-    }
-    
-    @SuppressWarnings("unchecked")
-    private static void UnsubscribeCmd(CommandLine initCmd) {
-    	JSONObject command = new JSONObject();
-    	
-    	//Unsubscribe need a subscribe id
-    	String id = initCmd.hasOption("id")?initCmd.getOptionValue("id"):"defaultId";
-    	
-    	command.put("command", "UNSUBSCRIBE");
-    	command.put("id", id);
-    	generalReply(command.toJSONString());
+    	subReply(command.toJSONString());
     }
     
     @SuppressWarnings("unchecked")
@@ -436,6 +426,9 @@ class Client {
             Socket unsecSocket = null;
             DataInputStream input;
             DataOutputStream output;
+            JSONParser parser = new JSONParser();
+            InputStreamReader fileInputStream=new InputStreamReader(System.in);
+            BufferedReader bufferedReader=new BufferedReader(fileInputStream);
             
             if (secure){
                 sslsocket = (SSLSocket) sslsocketfactory.createSocket(ip, port);
@@ -445,9 +438,9 @@ class Client {
                 sslsocket.setSoTimeout(TIMEOUT_SECS*1000);
             } else{
                 unsecSocket = new Socket(ip, port);
+                unsecSocket.setSoTimeout(TIMEOUT_SECS*1000);
                 input = new DataInputStream(unsecSocket.getInputStream());
                 output = new DataOutputStream(unsecSocket.getOutputStream());
-                unsecSocket.setSoTimeout(TIMEOUT_SECS*1000);
             }
                         
             //send request
@@ -458,15 +451,78 @@ class Client {
                         + " - [DEBUG] - SENT: " + request);
             }
                         
-            JSONParser parser = new JSONParser();
-            String recv;
-                        
+            String recv;            
             while(true) {
-//                if(input.available() > 0) {
                 try {
-                    //if((recv = input.readUTF()) != null){
-                	if(input.available() >0) {
-                		recv = input.readUTF();
+                    if((recv = input.readUTF()) != null){
+                        JSONObject reply = (JSONObject) parser.parse(recv);
+                        if (debug) {
+                            System.out.println(new Timestamp(System.currentTimeMillis())
+                                    + " - [DEBUG] - RECEIVED: " + recv);
+                        }
+                        else {
+                            System.out.println("Response from server: " + recv);
+                        }
+                        if (reply.containsKey("resultSize")) {
+                            break;
+                        }
+                    }
+                    
+                } catch (SocketException e){    //socket closed on other end
+                	e.printStackTrace();
+                    break;
+                } catch (SocketTimeoutException e){ //socket timed out
+                    //TODO Add timeoutexception to all cases where "read = input.readUTF()) != null" is used
+                	e.printStackTrace();
+                    break;
+                }
+            }
+            if (secure){
+                sslsocket.close();
+            } else {
+                unsecSocket.close();
+            }
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    
+    private static void subReply(String request) {
+    	try {
+            SSLSocketFactory sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
+            SSLSocket sslsocket = null;
+            Socket unsecSocket = null;
+            DataInputStream input;
+            DataOutputStream output;
+            JSONParser parser = new JSONParser();
+            
+            if (secure){
+                sslsocket = (SSLSocket) sslsocketfactory.createSocket(ip, port);
+              //Get I/O streams for connection
+                input = new DataInputStream(sslsocket.getInputStream());
+                output = new DataOutputStream(sslsocket.getOutputStream());
+                sslsocket.setSoTimeout(TIMEOUT_SECS*1000);
+            } else{
+                unsecSocket = new Socket(ip, port);
+                unsecSocket.setSoTimeout(TIMEOUT_SECS*1000);
+                input = new DataInputStream(unsecSocket.getInputStream());
+                output = new DataOutputStream(unsecSocket.getOutputStream());
+            }
+                        
+            //send request
+            output.writeUTF(request);
+            output.flush();
+            if (debug) {
+                System.out.println(new Timestamp(System.currentTimeMillis())
+                        + " - [DEBUG] - SENT: " + request);
+            }
+            
+            
+            String recv;            
+            while(true) {
+                try {
+                    if((recv = input.readUTF()) != null){
                         JSONObject reply = (JSONObject) parser.parse(recv);
                         if (debug) {
                             System.out.println(new Timestamp(System.currentTimeMillis())
@@ -499,10 +555,6 @@ class Client {
         }
     }
     
-    //TODO create a method without socket timeout
-    private static void asynReply(String request) {
-    	
-    }
     
     private static void PrintValidArgumentList() {
         System.out.println("Valid arguments include: \n"
