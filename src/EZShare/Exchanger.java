@@ -18,9 +18,18 @@ import org.json.simple.JSONObject;
 
 public class Exchanger extends TimerTask{
     private Boolean secure = false;
+    private String hostname;
+    private Boolean debug;
+ // Normal timeout duration for closing non-persistent connections
+    private static final int SOCKET_NORM_TIMEOUT_MS = 2*1000;    //ms
     
-    public Exchanger(int i) {
-        secure = i==1;
+    // Timeout duration for connection that should stay open for long
+//    private static final int SOCKET_LONG_TIMEOUT_MS = 600*1000;    //ms
+    
+    public Exchanger(int i, String hostname, Boolean debug) {
+        this.secure = i==1;
+        this.hostname = hostname;
+        this.debug = debug;
     }
 
     //Send EXCHANGE command every 10 minutes
@@ -58,12 +67,12 @@ public class Exchanger extends TimerTask{
                   //Get I/O streams for connection
                     input = new DataInputStream(sslsocket.getInputStream());
                     output = new DataOutputStream(sslsocket.getOutputStream());
-                    sslsocket.setSoTimeout(Server.SOCKET_TIMEOUT_MS);
+                    sslsocket.setSoTimeout(SOCKET_NORM_TIMEOUT_MS);
                 } else{
                     unsecSocket = new Socket(ip, port);
                     input = new DataInputStream(unsecSocket.getInputStream());
                     output = new DataOutputStream(unsecSocket.getOutputStream());
-                    unsecSocket.setSoTimeout(Server.SOCKET_TIMEOUT_MS);
+                    unsecSocket.setSoTimeout(SOCKET_NORM_TIMEOUT_MS);
                 }
                 
                 JSONObject command = new JSONObject();
@@ -71,13 +80,13 @@ public class Exchanger extends TimerTask{
                 
                 JSONArray serverArr = sList.getCopyServerList();
                 JSONObject host = new JSONObject();
-                host.put("hostname", Server.hostname);
+                host.put("hostname", hostname);
                 host.put("port", port);
                 serverArr.add(host);
 
                 command.put("serverList", serverArr);
                 output.writeUTF(command.toJSONString());
-                if (Server.debug) {
+                if (debug) {
                     System.out.println(new Timestamp(System.currentTimeMillis())
                             + " - [DEBUG] - SENT: " + command.toJSONString());
                 }
@@ -87,21 +96,21 @@ public class Exchanger extends TimerTask{
                     try {
                         if ((recv_response = input.readUTF()) != null) {
                             
-                            if (Server.debug) {
+                            if (debug) {
                                 System.out.println(new Timestamp(System.currentTimeMillis())
                                         + " - [DEBUG] - RECEIVED: " + recv_response);
                             }
                         }
                     } catch (SocketException e) {
-                        if (Server.debug) {
+                        if (debug) {
                             System.out.println(new Timestamp(System.currentTimeMillis())
-                                    +" - [FINE] - (Exchanger) Connection closed by server.");
+                                    +" - [FINE] - (Exchanger) Connection closed by other side.");
                         }
                         break;
                     } catch (SocketTimeoutException e){ //socket timed out
-                        if (Server.debug) {
+                        if (debug) {
                             System.out.println(new Timestamp(System.currentTimeMillis())
-                                    +" - [FINE] - (Exchanger) Connection timed out.");
+                                    +" - [FINE] - (Exchanger) Connection closed.");
                         }
                         break;
                     }
