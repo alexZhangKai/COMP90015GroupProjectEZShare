@@ -37,14 +37,20 @@ public class Server {
 
     //minimum time between each successive connection from the same IP address
     private static long connectionIntervalLimit = 1*1000;   //milliseconds
-    private static long exchangeIntervalLimit = 60*10;   //seconds
+    private static long exchangeIntervalLimit = 30;   //seconds
+    private static final long GAP_BETW_EXCHANGERS = 2000;  //MS; so that both exchangers have a gap
+
     //max number of concurrent client connections allowed
     private static final int MAX_THREADS = 10;
     
-    //TODO leave the public members as is? Made public for Exchanger to access
-    public static final int SOCKET_TIMEOUT_MS = 2*1000;    //ms
-    public static String hostname;
-    public static Boolean debug = false;
+    // Normal timeout duration for closing non-persistent connections
+//    private static final int SOCKET_NORM_TIMEOUT_MS = 2*1000;    //ms
+    
+    // Timeout duration for connection that should stay open for long
+//    private static final int SOCKET_LONG_TIMEOUT_MS = 600*1000;    //ms
+    
+    private static String hostname;
+    private static Boolean debug = false;
     
     private static int connections_cnt = 0;
     private static int port = 3780;
@@ -132,9 +138,14 @@ public class Server {
         
         //Set exchange schema
         for (int i = 0; i < 2; i++) {
-            TimerTask timerTask = new Exchanger(i);
+            TimerTask timerTask = new Exchanger(i, hostname, debug);
             Timer timer = new Timer(true);
             timer.scheduleAtFixedRate(timerTask, 1, Server.exchangeIntervalLimit*1000);
+            try {
+                Thread.sleep(GAP_BETW_EXCHANGERS);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
     }
 

@@ -28,7 +28,13 @@ import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
 public class Connection implements Runnable {
-	private static final int SECS_TO_TIMEOUT = 2;  //how long to wait for an open connection
+//	private static final int SECS_TO_TIMEOUT = 2;  //how long to wait for an open connection
+ // Normal timeout duration for closing non-persistent connections
+    private static final int SOCKET_NORM_TIMEOUT_MS = 2*1000;    //ms
+    
+    // Timeout duration for connection that should stay open for long
+//    private static final int SOCKET_LONG_TIMEOUT_MS = 600*1000;    //ms
+    
     private Socket unsecClient;
     private SSLSocket sClient;
 	private String serverSecret;
@@ -111,7 +117,20 @@ public class Connection implements Runnable {
                     System.out.println(new Timestamp(System.currentTimeMillis())
                             + " - [DEBUG] - SENT: " + reply.toJSONString());
                 }
+				
+    			if (secure){sClient.close();}
+    	        else {unsecClient.close();}
 			}	
+		} catch (SocketException e){
+		    if (debug) {
+                System.out.println(new Timestamp(System.currentTimeMillis())
+                        +" - [FINE] - (Run) Connection closed by server.");
+            }
+		} catch (SocketTimeoutException e) {
+		    if (debug) {
+                System.out.println(new Timestamp(System.currentTimeMillis())
+                        +" - [FINE] - (Run) Connection closed.");
+            }
 		} catch (IOException e) {
 		    e.printStackTrace();
 		} catch (ParseException | ClassCastException e) {
@@ -127,9 +146,9 @@ public class Connection implements Runnable {
 			} catch (IOException e1) {
 				e1.printStackTrace();
 			}
-		} //TODO add sockets closures now that they're not inside the TRY ()
+		} 
 		// TODO JAR file containing keystores not accessible
-		// TODO Add socket timeout exceptions to all TRYs
+
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -431,12 +450,12 @@ public class Connection implements Runnable {
                   //Get I/O streams for connection
                     input = new DataInputStream(sslsocket.getInputStream());
                     output = new DataOutputStream(sslsocket.getOutputStream());
-                    sslsocket.setSoTimeout(SECS_TO_TIMEOUT*1000);
+                    sslsocket.setSoTimeout(SOCKET_NORM_TIMEOUT_MS*1000);
                 } else{
                     unsecSocket = new Socket(hostname, port);
                     input = new DataInputStream(unsecSocket.getInputStream());
                     output = new DataOutputStream(unsecSocket.getOutputStream());
-                    unsecSocket.setSoTimeout(SECS_TO_TIMEOUT*1000);
+                    unsecSocket.setSoTimeout(SOCKET_NORM_TIMEOUT_MS*1000);
                 }
                 
                 //record start time
@@ -453,7 +472,7 @@ public class Connection implements Runnable {
                 String read;
                 while (true) {                    
                     try {
-                        //TODO query command keeps looping with a SocketTimeOut exception
+                        //TODO query command keeps looping with a SocketTimeOut exception??
                         if ((read = input.readUTF()) != null) {
                             //get results and store in results list
                             JSONObject temp_response = (JSONObject) parser.parse(read);
@@ -467,18 +486,23 @@ public class Connection implements Runnable {
                             }
                         }
                     } catch (SocketException e){    //when the other side closes the connection
+                        if (debug) {
+                            System.out.println(new Timestamp(System.currentTimeMillis())
+                                    +" - [FINE] - (Propagate Query) Connection closed by server.");
+                        }
                         break;
                     } catch (SocketTimeoutException e){
+                        if (debug) {
+                            System.out.println(new Timestamp(System.currentTimeMillis())
+                                    +" - [FINE] - (Propagate Query) Connection closed.");
+                        }
                         break;
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
                 }
-                if (secure) {
-                    sslsocket.close();
-                } else {
-                    unsecSocket.close();
-                }
+                if (secure) {sslsocket.close();} 
+                else {unsecSocket.close();}
             } catch (ConnectException e) {
                 //If connection times out for a particular server, just move on
                 //...to the next one in the list. 
