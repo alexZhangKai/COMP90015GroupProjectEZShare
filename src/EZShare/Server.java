@@ -40,7 +40,7 @@ public class Server {
 
     //minimum time between each successive connection from the same IP address
     private static long connectionIntervalLimit = 1*1000;   //milliseconds
-    private static long exchangeIntervalLimit = 60*10;   //seconds
+    private static long exchangeIntervalLimit = 30;   //seconds
     private static final long GAP_BETW_EXCHANGERS = 2000;  //MS; so that both exchangers have a gap
 
     //max number of concurrent client connections allowed
