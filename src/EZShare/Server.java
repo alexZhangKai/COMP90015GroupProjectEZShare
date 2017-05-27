@@ -40,7 +40,7 @@ public class Server {
     
     //minimum time between each successive connection from the same IP address
     private static long connectionIntervalLimit = 1*1000;   //milliseconds
-    private static long exchangeIntervalLimit = 10;   //seconds
+    private static long exchangeIntervalLimit = 10*60;   //seconds
     private static final long GAP_BETW_EXCHANGERS = 2000;  //MS; so that both exchangers have a gap
 
     //max number of concurrent client connections allowed
@@ -50,8 +50,8 @@ public class Server {
     private static Boolean debug = false;
     
     private static int connections_cnt = 0;
-    static int port = 3780;
-    static int sPort = 3781; 
+    private static int port = 3780;
+    private static int sPort = 3781; 
     private static String secret;
     private static final Map<String, Boolean> argOptions;
     private static Map<String, Long> clientIPList = new HashMap<>();
@@ -150,7 +150,7 @@ public class Server {
         
         //Set exchange schema
         for (int i = 0; i < 2; i++) {
-            TimerTask timerTask = new Exchanger(i, hostname, debug);
+            TimerTask timerTask = new Exchanger(i, hostname, port, sPort, debug);
             Timer timer = new Timer(true);
             timer.scheduleAtFixedRate(timerTask, 1, Server.exchangeIntervalLimit*1000);
             try {

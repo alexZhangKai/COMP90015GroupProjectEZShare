@@ -29,6 +29,8 @@ import org.json.simple.JSONObject;
 public class Exchanger extends TimerTask{
     private Boolean secure = false;
     private String hostname;
+    private int port;
+    private int sPort;
     private Boolean debug;
     
  // Normal timeout duration for closing non-persistent connections
@@ -37,10 +39,12 @@ public class Exchanger extends TimerTask{
     // Timeout duration for connection that should stay open for long
 //    private static final int SOCKET_LONG_TIMEOUT_MS = 600*1000;    //ms
     
-    public Exchanger(int i, String hostname, Boolean debug) {
+    public Exchanger(int i, String hostname, int port, int sPort, Boolean debug) {
         this.secure = i==1;
         this.hostname = hostname;
         this.debug = debug;
+        this.port = port;
+        this.sPort = sPort;
     }
 
     //Send EXCHANGE command every 10 minutes
@@ -51,12 +55,12 @@ public class Exchanger extends TimerTask{
         int hostport = 0;
         if (secure){
             sList = ServerListManager.getSecServerList();
-            hostport = Server.sPort;
+            hostport = this.sPort;
             System.out.println("\n" + new Timestamp(System.currentTimeMillis()) 
                     + " - [INFO] - started secure Exchanger\n");
         } else {
             sList = ServerListManager.getUnsecServerList();
-            hostport = Server.port;
+            hostport = this.port;
             System.out.println("\n" + new Timestamp(System.currentTimeMillis()) 
                     + " - [INFO] - started Exchanger\n");
         }
