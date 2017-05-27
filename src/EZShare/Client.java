@@ -571,7 +571,7 @@ class Client {
 					JSONObject command = new JSONObject();
                 	command.put("command", "UNSUBSCRIBE");
                 	
-                	//TODO What to do with this ID stuff?
+                	//TODO What to do with this ID stuff? Generate randomly?
                 	command.put("id", subId);
                 	try {
 						output.writeUTF(command.toJSONString());

@@ -37,10 +37,11 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
 public class Server {
-
+    //TODO For all debug statements, list class & method
+    
     //minimum time between each successive connection from the same IP address
     private static long connectionIntervalLimit = 1*1000;   //milliseconds
-    private static long exchangeIntervalLimit = 30;   //seconds
+    private static long exchangeIntervalLimit = 10*60;   //seconds
     private static final long GAP_BETW_EXCHANGERS = 2000;  //MS; so that both exchangers have a gap
 
     //max number of concurrent client connections allowed

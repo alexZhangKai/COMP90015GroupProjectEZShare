@@ -146,7 +146,17 @@ public class Subscription {
 						System.out.println(new Timestamp(System.currentTimeMillis())
 								+ " - [DEBUG] - SENT: " + command.toJSONString());
 					}
-				} catch (IOException e) {
+				} catch (SocketException e){
+		            if (debug) {
+		                System.out.println(new Timestamp(System.currentTimeMillis())
+		                        +" - [FINE] - (Subscription) Connection closed by server.");
+		            }
+		        } catch (SocketTimeoutException e) {
+		            if (debug) {
+		                System.out.println(new Timestamp(System.currentTimeMillis())
+		                        +" - [FINE] - (Subscription) Connection closed by relay server.");
+		            }
+		        } catch (IOException e) {
 					e.printStackTrace();
 				}
 			}
