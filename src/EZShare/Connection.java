@@ -147,8 +147,6 @@ public class Connection implements Runnable {
 				e1.printStackTrace();
 			}
 		} 
-		// TODO JAR file containing keystores not accessible
-
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -367,7 +365,6 @@ public class Connection implements Runnable {
                 for (Resource res: res_results){
                     JSONObject resource_temp = Resource2JSONObject(res); 
                     
-                    //TODO check if the implementation below is OK
                     //If the result contains an owner (not empty), replace it with "*"
                     if(!resource_temp.get("owner").equals("")) {
                     	resource_temp.put("owner", "*");

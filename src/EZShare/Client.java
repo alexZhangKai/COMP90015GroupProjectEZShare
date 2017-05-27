@@ -41,16 +41,16 @@ import javax.net.ssl.SSLSocketFactory;
 class Client {    
     // Normal timeout duration for closing non-persistent connections
     private static final int SOCKET_NORM_TIMEOUT_S = 2*1000;    //ms
-  
-  // Timeout duration for connection that should stay open for long
-    private static final int SOCKET_LONG_TIMEOUT_S = 600*1000;    //ms
+    // Intermediate timeout duration for closing connections that take a while e.g. Query relay
+    private static final int SOCKET_MED_TIMEOUT_S = 5*1000;     //ms
+    // Timeout duration for connection that should stay open for long
+    private static final int SOCKET_LONG_TIMEOUT_S = 600*1000;  //ms
     
     private static String ip = "localhost";
     private static int port = 3780;
     private static int sPort = 3781;
     private static Boolean debug = false; //verbose output
     private static Boolean secure = false;
-//    private static final int TIMEOUT_SECS = 10;
     private static Boolean relay = true;
     private static int CHUNK_SIZE = 1024*1024;
     private static String subId = "defaultID";
@@ -189,7 +189,7 @@ class Client {
         command.put("resource", resource);
         
         //send off to server
-        generalReply(command.toJSONString());
+        generalReply(command.toJSONString(), SOCKET_NORM_TIMEOUT_S);
     }
     
     @SuppressWarnings("unchecked")
@@ -199,7 +199,7 @@ class Client {
 
         command.put("command", "REMOVE");
         command.put("resource", resource);
-        generalReply(command.toJSONString());
+        generalReply(command.toJSONString(), SOCKET_NORM_TIMEOUT_S);
     }
     
     @SuppressWarnings("unchecked")
@@ -213,7 +213,7 @@ class Client {
         command.put("command", "SHARE");
         command.put("secret", secret);
         command.put("resource", resource);
-        generalReply(command.toJSONString());
+        generalReply(command.toJSONString(), SOCKET_NORM_TIMEOUT_S);
     }
     
     @SuppressWarnings("unchecked")
@@ -224,7 +224,7 @@ class Client {
         command.put("command", "QUERY");
         command.put("relay", relay);
         command.put("resourceTemplate", resourceTemplate);
-        generalReply(command.toJSONString());
+        generalReply(command.toJSONString(), SOCKET_MED_TIMEOUT_S);
     }
     
     @SuppressWarnings("unchecked")
@@ -247,7 +247,7 @@ class Client {
               //Get I/O streams for connection
                 input = new DataInputStream(sslsocket.getInputStream());
                 output = new DataOutputStream(sslsocket.getOutputStream());
-                sslsocket.setSoTimeout(SOCKET_NORM_TIMEOUT_S);
+                sslsocket.setSoTimeout(SOCKET_LONG_TIMEOUT_S);
             } else{
                 unsecSocket = new Socket(ip, port);
                 input = new DataInputStream(unsecSocket.getInputStream());
@@ -366,7 +366,7 @@ class Client {
         }
         command.put("command", "EXCHANGE");
         command.put("serverList", servers);
-        generalReply(command.toJSONString());
+        generalReply(command.toJSONString(), SOCKET_NORM_TIMEOUT_S);
     }
     
     private static int setChunkSize(long fileSizeRemaining) {
@@ -392,14 +392,14 @@ class Client {
     private static void MissingCmd() {
         JSONObject jobj = new JSONObject();
         jobj.put("NoCommand", "blah");
-        Client.generalReply(jobj.toString());
+        Client.generalReply(jobj.toString(), SOCKET_NORM_TIMEOUT_S);
     }
         
     @SuppressWarnings("unchecked")
     private static void InvalidCmd() {
         JSONObject jobj = new JSONObject();
         jobj.put("command", "invalidCommand");
-        Client.generalReply(jobj.toString());   
+        Client.generalReply(jobj.toString(), SOCKET_NORM_TIMEOUT_S);   
     }
     
     //Create a JSON object from resource information given in CMD arguments 
@@ -440,7 +440,7 @@ class Client {
     }
     
     //Send JSON command to server
-    private static void generalReply(String request) {
+    private static void generalReply(String request, Integer timeout) {
         
         try {
             SSLSocketFactory sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
@@ -455,10 +455,10 @@ class Client {
               //Get I/O streams for connection
                 input = new DataInputStream(sslsocket.getInputStream());
                 output = new DataOutputStream(sslsocket.getOutputStream());
-                sslsocket.setSoTimeout(SOCKET_NORM_TIMEOUT_S);
+                sslsocket.setSoTimeout(timeout);
             } else{
                 unsecSocket = new Socket(ip, port);
-                unsecSocket.setSoTimeout(SOCKET_NORM_TIMEOUT_S);
+                unsecSocket.setSoTimeout(timeout);
                 input = new DataInputStream(unsecSocket.getInputStream());
                 output = new DataOutputStream(unsecSocket.getOutputStream());
             }
@@ -508,6 +508,16 @@ class Client {
                 unsecSocket.close();
             }
             
+        } catch (SocketException e){    //when the other side closes the connection
+            if (debug) {
+                System.out.println(new Timestamp(System.currentTimeMillis())
+                        +" - [FINE] - (Propagate Query) Connection closed by server.");
+            }
+        } catch (SocketTimeoutException e){
+            if (debug) {
+                System.out.println(new Timestamp(System.currentTimeMillis())
+                        +" - [FINE] - (Propagate Query) Connection closed.");
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
