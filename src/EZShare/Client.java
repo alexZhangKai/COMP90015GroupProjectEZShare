@@ -11,6 +11,7 @@ package EZShare;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.net.Socket;
 import java.net.SocketException;
@@ -526,62 +527,97 @@ class Client {
                         + " - [DEBUG] - SENT: " + request);
             }
             
-            Thread ListenConsole = new Thread(new Runnable() {
-
-				@Override
+            class ListenConsole extends Thread {
+            	private DataOutputStream output;
+            	
+            	public ListenConsole(DataOutputStream output) {
+            		this.output = output;
+            	}
+            	
+            	@Override
 				public void run() {
 					Scanner sc = new Scanner(System.in);
 					sc.nextLine();
 					sc.close();
+					
+					//Send UNSUBSCRIBE command
+					JSONObject command = new JSONObject();
+                	command.put("command", "UNSUBSCRIBE");
+                	command.put("id", subId);
+                	try {
+						output.writeUTF(command.toJSONString());
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
 				}
-            	
-            });
-            ListenConsole.start();
-            // TODO create new thread for readUTF blocking
-            // ...another thread for terminal input blocking??
-            //ListenConsole.join();
-            String recv;            
-            while(true) {
-                try {
-                    if((recv = input.readUTF()) != null){
-                        JSONObject reply = (JSONObject) parser.parse(recv);
-                        if (debug) {
-                            System.out.println(new Timestamp(System.currentTimeMillis())
-                                    + " - [DEBUG] - RECEIVED: " + recv);
-                        }
-                        else {
-                            System.out.println("Response from server: " + recv);
-                        }
-                        if (reply.containsKey("resultSize")) {
-                            break;
-                        }
-                    }
-                    
-                    //Listen console input
-                    if(!ListenConsole.isAlive()) {
-                    	//send unsubscribe command
-                    	JSONObject command = new JSONObject();
-                    	command.put("command", "UNSUBSCRIBE");
-                    	command.put("id", subId);
-                    	output.writeUTF(command.toJSONString());
-                    	
-                    	break;
-                    }
-                    
-                } catch (SocketException e){    //socket closed on other end
-                    if (debug) {
-                        System.out.println(new Timestamp(System.currentTimeMillis())
-                                +" - [FINE] - (General Reply) Connection closed by server.");
-                    }
-                    break;
-                } catch (SocketTimeoutException e){ //socket timed out
-                    if (debug) {
-                        System.out.println(new Timestamp(System.currentTimeMillis())
-                                +" - [FINE] - (General Reply) Connection timed out.");
-                    }
-                    break;
-                }
             }
+            
+            class ListenServer extends Thread {
+            	private DataInputStream input;
+            	
+            	public ListenServer(DataInputStream input) {
+            		this.input = input;
+            	}
+            	
+            	@Override
+            	public void run() {
+            		String recv;            
+                    while(true) {
+                        try {
+                            if((recv = input.readUTF()) != null){
+                                JSONObject reply = (JSONObject) parser.parse(recv);
+                                if (debug) {
+                                    System.out.println(new Timestamp(System.currentTimeMillis())
+                                            + " - [DEBUG] - RECEIVED: " + recv);
+                                }
+                                else {
+                                    System.out.println("Response from server: " + recv);
+                                }
+                                if (reply.containsKey("resultSize")) {
+                                    break;
+                                }
+                            }
+                            
+                        } catch (SocketException e){    //socket closed on other end
+                            if (debug) {
+                                System.out.println(new Timestamp(System.currentTimeMillis())
+                                        +" - [FINE] - (Subscribe Reply) Connection closed by server.");
+                            }
+                            break;
+                        } catch (SocketTimeoutException e){ //socket timed out
+                            if (debug) {
+                                System.out.println(new Timestamp(System.currentTimeMillis())
+                                        +" - [FINE] - (Subscribe Reply) Connection timed out.");
+                            }
+                            break;
+                        } catch (IOException e) { // bad connection
+                        	if (debug) {
+                                System.out.println(new Timestamp(System.currentTimeMillis())
+                                        +" - [FINE] - (Subscribe Reply) Bad Connection.");
+                            }
+                            break;
+						} catch (org.json.simple.parser.ParseException e) { // Parser Exception
+							if (debug) {
+                                System.out.println(new Timestamp(System.currentTimeMillis())
+                                        +" - [FINE] - (Subscribe Reply) Parser Exception.");
+                            }
+                            break;
+						}
+                    }
+            	}
+            }
+            
+            // Start listen from console and server in separate threads
+            ListenServer listenServer = new ListenServer(input);
+            ListenConsole listenConsole = new ListenConsole(output);
+            listenServer.start();
+            listenConsole.start();
+            // wait console enter ENTER, send UNSUBSCRIBE
+            listenConsole.join();
+            // wait server send result size
+            listenServer.join();
+            
             if (secure){
                 sslsocket.close();
             } else {
