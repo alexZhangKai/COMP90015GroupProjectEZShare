@@ -1,3 +1,14 @@
+/*
+ * Distributed Systems
+ * Group Project 2
+ * Sem 1, 2017
+ * Group: AALT
+ * 
+ * For each relay connection for each client, creates a new thread
+ * # of threads = # of servers x # of clients subscriptions[w/ relay]
+ */
+
+
 package EZShare;
 
 import java.io.DataInputStream;

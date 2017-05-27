@@ -1,3 +1,13 @@
+/*
+ * Distributed Systems
+ * Group Project 2
+ * Sem 1, 2017
+ * Group: AALT
+ * 
+ * Class that handles exchanging servers with others in the list.
+ */
+
+
 package EZShare;
 
 import java.io.DataInputStream;

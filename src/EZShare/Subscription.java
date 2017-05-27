@@ -1,3 +1,13 @@
+/*
+ * Distributed Systems
+ * Group Project 2
+ * Sem 1, 2017
+ * Group: AALT
+ * 
+ * Manages each subscription
+ */
+
+
 package EZShare;
 
 import java.io.*;
