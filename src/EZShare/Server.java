@@ -9,10 +9,14 @@
 
 package EZShare;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.nio.file.Files;
 import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.Map;
@@ -32,22 +36,15 @@ import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
-
 public class Server {
 
     //minimum time between each successive connection from the same IP address
     private static long connectionIntervalLimit = 1*1000;   //milliseconds
-    private static long exchangeIntervalLimit = 30;   //seconds
+    private static long exchangeIntervalLimit = 60*10;   //seconds
     private static final long GAP_BETW_EXCHANGERS = 2000;  //MS; so that both exchangers have a gap
 
     //max number of concurrent client connections allowed
     private static final int MAX_THREADS = 10;
-    
-    // Normal timeout duration for closing non-persistent connections
-//    private static final int SOCKET_NORM_TIMEOUT_MS = 2*1000;    //ms
-    
-    // Timeout duration for connection that should stay open for long
-//    private static final int SOCKET_LONG_TIMEOUT_MS = 600*1000;    //ms
     
     private static String hostname;
     private static Boolean debug = false;
@@ -71,6 +68,21 @@ public class Server {
     }
     
     public static void main(String[] args) {        
+        // Set up keystores from JAR file, locally.
+        File skdir = new File("keystores");
+        skdir.mkdir();
+        File sk = new File("keystores/server.jks");
+        if (!sk.exists()) {
+            InputStream link = Server.class.getResourceAsStream("/server.jks");
+            try {
+                Files.copy(link, sk.getAbsoluteFile().toPath());
+            } catch (IOException e) {
+                System.out.println(
+                        "ERROR: Could not write temporary server keystore locally.");
+                System.exit(0);
+            }
+        }
+        
         //Parse CMD options
         Options options = new Options();
         for (String option: argOptions.keySet()){
@@ -167,7 +179,7 @@ public class Server {
             @Override
             public void run() {
                 Boolean secure = true;
-              //Set truststore and keystore with its password
+                //Set truststore and keystore with its password
                 System.setProperty("javax.net.ssl.trustStore", "keystores/server.jks");
                 System.setProperty("javax.net.ssl.keyStore","keystores/server.jks");
                 System.setProperty("javax.net.ssl.keyStorePassword","aalt_s");

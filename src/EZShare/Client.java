@@ -1,6 +1,6 @@
 /*
  * Distributed Systems
- * Group Project 1
+ * Group Project 2
  * Sem 1, 2017
  * Group: AALT
  *
@@ -9,14 +9,16 @@
 
 package EZShare;
 
-import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.InputStreamReader;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
+import java.nio.file.Files;
 import java.sql.Timestamp;
 
 import org.apache.commons.cli.CommandLine;
@@ -28,8 +30,6 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 
-import javafx.util.Callback;
-
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -38,17 +38,19 @@ import java.util.Scanner;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
-class Client {
-    
-    //TODO Unsubscribe -> Add separate thread to listen to terminal input;
-    // callback to unsubscribe when 'enter' is pressed
+class Client {    
+    // Normal timeout duration for closing non-persistent connections
+    private static final int SOCKET_NORM_TIMEOUT_S = 2*1000;    //ms
+  
+  // Timeout duration for connection that should stay open for long
+    private static final int SOCKET_LONG_TIMEOUT_S = 600*1000;    //ms
     
     private static String ip = "localhost";
     private static int port = 3780;
     private static int sPort = 3781;
     private static Boolean debug = false; //verbose output
     private static Boolean secure = false;
-    private static final int TIMEOUT_SECS = 10;
+//    private static final int TIMEOUT_SECS = 10;
     private static Boolean relay = true;
     private static int CHUNK_SIZE = 1024*1024;
     private static String subId = "defaultID";
@@ -82,7 +84,21 @@ class Client {
     }
     
     public static void main(String[] args) {
-      //Set truststore and keystore with its password
+        File skdir = new File("keystores");
+        skdir.mkdir();
+        File sk = new File("keystores/client.jks");
+        if (!sk.exists()) {
+            InputStream link = Client.class.getResourceAsStream("/client.jks");
+            try {
+                Files.copy(link, sk.getAbsoluteFile().toPath());
+            } catch (IOException e) {
+                System.out.println(
+                        "ERROR: Could not write temporary client keystore locally.");
+                System.exit(0);
+            }
+        }
+        
+        //Set truststore and keystore with its password
         System.setProperty("javax.net.ssl.trustStore", "keystores/client.jks");
         System.setProperty("javax.net.ssl.keyStore","keystores/client.jks");
         System.setProperty("javax.net.ssl.keyStorePassword","aalt_s");
@@ -231,12 +247,12 @@ class Client {
               //Get I/O streams for connection
                 input = new DataInputStream(sslsocket.getInputStream());
                 output = new DataOutputStream(sslsocket.getOutputStream());
-                sslsocket.setSoTimeout(TIMEOUT_SECS*1000);
+                sslsocket.setSoTimeout(SOCKET_NORM_TIMEOUT_S);
             } else{
                 unsecSocket = new Socket(ip, port);
                 input = new DataInputStream(unsecSocket.getInputStream());
                 output = new DataOutputStream(unsecSocket.getOutputStream());
-                unsecSocket.setSoTimeout(TIMEOUT_SECS*1000);
+                unsecSocket.setSoTimeout(SOCKET_LONG_TIMEOUT_S);
             }            
             //send request
             output.writeUTF(command.toJSONString());
@@ -323,6 +339,11 @@ class Client {
                     }
                     break;
                 }
+            }
+            if (secure) {
+                sslsocket.close();
+            } else {
+                unsecSocket.close();
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -428,18 +449,16 @@ class Client {
             DataInputStream input;
             DataOutputStream output;
             JSONParser parser = new JSONParser();
-            InputStreamReader fileInputStream=new InputStreamReader(System.in);
-            BufferedReader bufferedReader=new BufferedReader(fileInputStream);
             
             if (secure){
                 sslsocket = (SSLSocket) sslsocketfactory.createSocket(ip, port);
               //Get I/O streams for connection
                 input = new DataInputStream(sslsocket.getInputStream());
                 output = new DataOutputStream(sslsocket.getOutputStream());
-                sslsocket.setSoTimeout(TIMEOUT_SECS*1000);
+                sslsocket.setSoTimeout(SOCKET_NORM_TIMEOUT_S);
             } else{
                 unsecSocket = new Socket(ip, port);
-                unsecSocket.setSoTimeout(TIMEOUT_SECS*1000);
+                unsecSocket.setSoTimeout(SOCKET_NORM_TIMEOUT_S);
                 input = new DataInputStream(unsecSocket.getInputStream());
                 output = new DataOutputStream(unsecSocket.getOutputStream());
             }
@@ -470,11 +489,16 @@ class Client {
                     }
                     
                 } catch (SocketException e){    //socket closed on other end
-                	e.printStackTrace();
+                    if (debug) {
+                        System.out.println(new Timestamp(System.currentTimeMillis())
+                                +" - [FINE] - (General Reply) Connection closed by server.");
+                    }
                     break;
                 } catch (SocketTimeoutException e){ //socket timed out
-                    //TODO Add timeoutexception to all cases where "read = input.readUTF()) != null" is used
-                	e.printStackTrace();
+                    if (debug) {
+                        System.out.println(new Timestamp(System.currentTimeMillis())
+                                +" - [FINE] - (General Reply) Connection closed.");
+                    }
                     break;
                 }
             }
@@ -504,10 +528,10 @@ class Client {
               //Get I/O streams for connection
                 input = new DataInputStream(sslsocket.getInputStream());
                 output = new DataOutputStream(sslsocket.getOutputStream());
-                sslsocket.setSoTimeout(TIMEOUT_SECS*1000);
+                sslsocket.setSoTimeout(SOCKET_LONG_TIMEOUT_S);
             } else{
                 unsecSocket = new Socket(ip, port);
-                unsecSocket.setSoTimeout(TIMEOUT_SECS*1000);
+                unsecSocket.setSoTimeout(SOCKET_LONG_TIMEOUT_S);
                 input = new DataInputStream(unsecSocket.getInputStream());
                 output = new DataOutputStream(unsecSocket.getOutputStream());
             }
@@ -520,59 +544,113 @@ class Client {
                         + " - [DEBUG] - SENT: " + request);
             }
             
-            Thread ListenConsole = new Thread(new Runnable() {
-
-				@Override
+            class ListenConsole extends Thread {
+            	private DataOutputStream output;
+            	
+            	public ListenConsole(DataOutputStream output) {
+            		this.output = output;
+            	}
+            	
+            	@Override
 				public void run() {
 					Scanner sc = new Scanner(System.in);
 					sc.nextLine();
+					sc.close();
+					
+					//Send UNSUBSCRIBE command
+					JSONObject command = new JSONObject();
+                	command.put("command", "UNSUBSCRIBE");
+                	
+                	//TODO What to do with this ID stuff?
+                	command.put("id", subId);
+                	try {
+						output.writeUTF(command.toJSONString());
+						output.flush();
+						if (debug) {
+			                System.out.println(new Timestamp(System.currentTimeMillis())
+			                        + " - [DEBUG] - SENT: " + command.toJSONString());
+			            }
+					} catch (SocketException e){    //connection closed
+	                    if (debug) {
+	                        System.out.println(new Timestamp(System.currentTimeMillis())
+	                                +" - [FINE] - (ListenConsole) Connection closed by server.");
+	                    }
+	                } catch (SocketTimeoutException e){ //socket has timed out
+	                    if (debug) {
+	                        System.out.println(new Timestamp(System.currentTimeMillis())
+	                                +" - [FINE] - (ListenConsole) Connection closed.");
+	                    }
+	                } catch (IOException e) {
+						e.printStackTrace();
+					}
 				}
-            	
-            });
-            ListenConsole.start();
-            
-            String recv;            
-            while(true) {
-                try {
-                    if((recv = input.readUTF()) != null){
-                        JSONObject reply = (JSONObject) parser.parse(recv);
-                        if (debug) {
-                            System.out.println(new Timestamp(System.currentTimeMillis())
-                                    + " - [DEBUG] - RECEIVED: " + recv);
-                        }
-                        else {
-                            System.out.println("Response from server: " + recv);
-                        }
-                        if (reply.containsKey("resultSize")) {
-                            break;
-                        }
-                    }
-                    
-                    //Listen console input
-                    if(!ListenConsole.isAlive()) {
-                    	//send unsubscribe command
-                    	JSONObject command = new JSONObject();
-                    	command.put("command", "UNSUBSCRIBE");
-                    	command.put("id", subId);
-                    	output.writeUTF(command.toJSONString());
-                    	
-                    	break;
-                    }
-                    
-                } catch (SocketException e){    //socket closed on other end
-                    if (debug) {
-                        System.out.println(new Timestamp(System.currentTimeMillis())
-                                +" - [FINE] - (General Reply) Connection closed by server.");
-                    }
-                    break;
-                } catch (SocketTimeoutException e){ //socket timed out
-                    if (debug) {
-                        System.out.println(new Timestamp(System.currentTimeMillis())
-                                +" - [FINE] - (General Reply) Connection timed out.");
-                    }
-                    break;
-                }
             }
+            
+            class ListenServer extends Thread {
+            	private DataInputStream input;
+            	
+            	public ListenServer(DataInputStream input) {
+            		this.input = input;
+            	}
+            	
+            	@Override
+            	public void run() {
+            		String recv;            
+                    while(true) {
+                        try {
+                            if((recv = input.readUTF()) != null){
+                                JSONObject reply = (JSONObject) parser.parse(recv);
+                                if (debug) {
+                                    System.out.println(new Timestamp(System.currentTimeMillis())
+                                            + " - [DEBUG] - RECEIVED: " + recv);
+                                }
+                                else {
+                                    System.out.println("Response from server: " + recv);
+                                }
+                                if (reply.containsKey("resultSize")) {
+                                    break;
+                                }
+                            }
+                            
+                        } catch (SocketException e){    //socket closed on other end
+                            if (debug) {
+                                System.out.println(new Timestamp(System.currentTimeMillis())
+                                        +" - [FINE] - (Subscribe Reply) Connection closed by server.");
+                            }
+                            break;
+                        } catch (SocketTimeoutException e){ //socket timed out
+                            if (debug) {
+                                System.out.println(new Timestamp(System.currentTimeMillis())
+                                        +" - [FINE] - (Subscribe Reply) Connection timed out.");
+                            }
+                            break;
+                        } catch (IOException e) { // bad connection
+                        	if (debug) {
+                                System.out.println(new Timestamp(System.currentTimeMillis())
+                                        +" - [FINE] - (Subscribe Reply) Bad Connection.");
+                            }
+                            break;
+						} catch (org.json.simple.parser.ParseException e) { // Parser Exception
+							if (debug) {
+                                System.out.println(new Timestamp(System.currentTimeMillis())
+                                        +" - [FINE] - (Subscribe Reply) Parser Exception.");
+                            }
+                            break;
+						}
+                    }
+            	}
+            }
+            
+            // Start listen from console and server in separate threads
+            ListenServer listenServer = new ListenServer(input);
+            ListenConsole listenConsole = new ListenConsole(output);
+            listenServer.start();
+            listenConsole.start();
+            // wait console enter ENTER, send UNSUBSCRIBE
+            listenConsole.join();
+            // wait server send result size
+            listenServer.join();
+            
             if (secure){
                 sslsocket.close();
             } else {

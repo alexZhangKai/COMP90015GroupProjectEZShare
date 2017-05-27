@@ -23,7 +23,7 @@ public class ServerList {
 	
 	//Update current server list with an incoming list i.e. a union of the two lists
 	@SuppressWarnings("unchecked")
-	public synchronized void update(JSONArray newList, String hostname, int hostport) 
+	public synchronized void update(JSONArray newList, String hostname, int hostport, Boolean secure) 
 			throws ClassCastException, UnknownHostException, NumberFormatException, serverException {
 		JSONArray realNewServerList = new JSONArray();
 
@@ -64,7 +64,7 @@ public class ServerList {
 		}
 	    
 	    //notify subscription manager about new servers
-	    SubscriptionManager.newServerCome(realNewServerList);
+	    SubscriptionManager.newServerCome(realNewServerList, secure);
 	}
 	
 	//Select a random server from the list

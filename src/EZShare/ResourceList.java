@@ -20,7 +20,7 @@ import java.util.List;
 public class ResourceList {
 	private static ArrayList<Resource> resourceList = new ArrayList<Resource>();
   
-	private synchronized static boolean modifyReourceList (boolean operation, Resource resource) throws serverException {
+	private synchronized static boolean modifyResourceList (boolean operation, Resource resource) throws serverException {
 		//true for add, false for remove 
 		if (operation) {
 			return resourceList.add(resource);
@@ -37,7 +37,7 @@ public class ResourceList {
 		//if no existing resource channel and URI matches... 
 		if (match == null) {
 		    //...then add it.
-			if (!modifyReourceList(true, newResource)) {
+			if (!modifyResourceList(true, newResource)) {
 				throw new serverException("cannot publish resource");
 			} else {
 				SubscriptionManager.allSubMatch(newResource);
@@ -49,15 +49,14 @@ public class ResourceList {
 			if (!match.getOwner().equals(newResource.getOwner()))
 				throw new serverException("cannot publish resource");
 			
-			// TODO have to check separately in subscribe
 			   //...else: remove existing resource with that PK and add new one 
 			//if (!modifyReourceList(false, match) || !modifyReourceList(true, newResource)) 
 				//throw new serverException("cannot publish resource");
 			
-			if(!modifyReourceList(false, match))
+			if(!modifyResourceList(false, match))
 				throw new serverException("cannot publish resource");
 			
-			if(modifyReourceList(true, newResource)){
+			if(modifyResourceList(true, newResource)){
 				SubscriptionManager.allSubMatch(newResource);
 			} else {
 				throw new serverException("cannot publish resource");
@@ -71,7 +70,7 @@ public class ResourceList {
 		if (match == null) {
 			throw new serverException("cannot remove resource");
 		} else {
-			if (!modifyReourceList(false, match)) throw new serverException("cannot remove resource");
+			if (!modifyResourceList(false, match)) throw new serverException("cannot remove resource");
 		}
 	}
 
