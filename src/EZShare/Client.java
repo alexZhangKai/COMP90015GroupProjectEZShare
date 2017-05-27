@@ -34,6 +34,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.UUID;
 
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
@@ -53,7 +54,7 @@ class Client {
     private static Boolean secure = false;
     private static Boolean relay = true;
     private static int CHUNK_SIZE = 1024*1024;
-    private static String subId = "defaultID";
+    private static String subId = UUID.randomUUID().toString().replaceAll("-", "").substring(0, 4);
     
     private static final Map<String, Boolean> argOptions;
     static{
@@ -571,7 +572,6 @@ class Client {
 					JSONObject command = new JSONObject();
                 	command.put("command", "UNSUBSCRIBE");
                 	
-                	//TODO What to do with this ID stuff? Generate randomly?
                 	command.put("id", subId);
                 	try {
 						output.writeUTF(command.toJSONString());
