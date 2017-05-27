@@ -11,11 +11,14 @@ package EZShare;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
+import java.nio.file.Files;
 import java.sql.Timestamp;
 
 import org.apache.commons.cli.CommandLine;
@@ -81,7 +84,21 @@ class Client {
     }
     
     public static void main(String[] args) {
-      //Set truststore and keystore with its password
+        File skdir = new File("keystores");
+        skdir.mkdir();
+        File sk = new File("keystores/client.jks");
+        if (!sk.exists()) {
+            InputStream link = Client.class.getResourceAsStream("/client.jks");
+            try {
+                Files.copy(link, sk.getAbsoluteFile().toPath());
+            } catch (IOException e) {
+                System.out.println(
+                        "ERROR: Could not write temporary client keystore locally.");
+                System.exit(0);
+            }
+        }
+        
+        //Set truststore and keystore with its password
         System.setProperty("javax.net.ssl.trustStore", "keystores/client.jks");
         System.setProperty("javax.net.ssl.keyStore","keystores/client.jks");
         System.setProperty("javax.net.ssl.keyStorePassword","aalt_s");
@@ -543,6 +560,8 @@ class Client {
 					//Send UNSUBSCRIBE command
 					JSONObject command = new JSONObject();
                 	command.put("command", "UNSUBSCRIBE");
+                	
+                	//TODO What to do with this ID stuff?
                 	command.put("id", subId);
                 	try {
 						output.writeUTF(command.toJSONString());

@@ -9,10 +9,14 @@
 
 package EZShare;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.nio.file.Files;
 import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.Map;
@@ -31,7 +35,6 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-
 
 public class Server {
 
@@ -65,6 +68,21 @@ public class Server {
     }
     
     public static void main(String[] args) {        
+        // Set up keystores from JAR file, locally.
+        File skdir = new File("keystores");
+        skdir.mkdir();
+        File sk = new File("keystores/server.jks");
+        if (!sk.exists()) {
+            InputStream link = Server.class.getResourceAsStream("/server.jks");
+            try {
+                Files.copy(link, sk.getAbsoluteFile().toPath());
+            } catch (IOException e) {
+                System.out.println(
+                        "ERROR: Could not write temporary server keystore locally.");
+                System.exit(0);
+            }
+        }
+        
         //Parse CMD options
         Options options = new Options();
         for (String option: argOptions.keySet()){
@@ -161,7 +179,7 @@ public class Server {
             @Override
             public void run() {
                 Boolean secure = true;
-              //Set truststore and keystore with its password
+                //Set truststore and keystore with its password
                 System.setProperty("javax.net.ssl.trustStore", "keystores/server.jks");
                 System.setProperty("javax.net.ssl.keyStore","keystores/server.jks");
                 System.setProperty("javax.net.ssl.keyStorePassword","aalt_s");
