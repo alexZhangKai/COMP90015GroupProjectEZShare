@@ -122,8 +122,9 @@ public class Subscription {
 		                    + " - [DEBUG] - RECEIVED: " + command.toJSONString());
 		        }
 				
-				if(receiveFromRelay.available() > 0) {
-					JSONObject relayReply = (JSONObject) parser.parse(receiveFromRelay.readUTF());
+				String result;
+				if((result = receiveFromRelay.readUTF()) != null) {
+					JSONObject relayReply = (JSONObject) parser.parse(result);
 					if (debug) {
 		                System.out.println(new Timestamp(System.currentTimeMillis())
 		                        + " - [DEBUG] - RECEIVED: " + relayReply);
