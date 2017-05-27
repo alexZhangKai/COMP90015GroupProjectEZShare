@@ -511,12 +511,12 @@ class Client {
         } catch (SocketException e){    //when the other side closes the connection
             if (debug) {
                 System.out.println(new Timestamp(System.currentTimeMillis())
-                        +" - [FINE] - (Propagate Query) Connection closed by server.");
+                        +" - [FINE] - (General Reply) Connection closed by server.");
             }
         } catch (SocketTimeoutException e){
             if (debug) {
                 System.out.println(new Timestamp(System.currentTimeMillis())
-                        +" - [FINE] - (Propagate Query) Connection closed.");
+                        +" - [FINE] - (General Reply) Connection closed.");
             }
         } catch (Exception e) {
             e.printStackTrace();
