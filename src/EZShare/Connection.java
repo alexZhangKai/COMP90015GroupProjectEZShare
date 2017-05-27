@@ -386,16 +386,18 @@ public class Connection implements Runnable {
                             + " - [DEBUG] - SENT: " + result_size.toJSONString());
                 }
                 
-            } catch (Exception e) { //invalid resourceTemplate
-                JSONObject inv_res = new JSONObject();
-                inv_res.put("response", "error");
-                inv_res.put("errorMessage", "invalid resourceTemplate");
-                output.writeUTF(inv_res.toJSONString());
-                if (debug) {
-                    System.out.println(new Timestamp(System.currentTimeMillis())
-                            + " - [DEBUG] - SENT: " + inv_res.toJSONString());
-                }
-            }            
+            } catch (serverException e){ //invalid resourceTemplate
+              JSONObject inv_res = new JSONObject();
+              inv_res.put("response", "error");
+              inv_res.put("errorMessage", "invalid resourceTemplate");
+              output.writeUTF(inv_res.toJSONString());
+              if (debug) {
+                  System.out.println(new Timestamp(System.currentTimeMillis())
+                          + " - [DEBUG] - SENT: " + inv_res.toJSONString());
+              }
+            } catch (Exception e) { 
+                e.printStackTrace();
+            }
         } else {
             // Missing resource template error - send to client
             JSONObject error = new JSONObject();
