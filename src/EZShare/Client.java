@@ -546,8 +546,22 @@ class Client {
                 	command.put("id", subId);
                 	try {
 						output.writeUTF(command.toJSONString());
-					} catch (IOException e) {
-						// TODO Auto-generated catch block
+						output.flush();
+						if (debug) {
+			                System.out.println(new Timestamp(System.currentTimeMillis())
+			                        + " - [DEBUG] - SENT: " + command.toJSONString());
+			            }
+					} catch (SocketException e){    //connection closed
+	                    if (debug) {
+	                        System.out.println(new Timestamp(System.currentTimeMillis())
+	                                +" - [FINE] - (ListenConsole) Connection closed by server.");
+	                    }
+	                } catch (SocketTimeoutException e){ //socket has timed out
+	                    if (debug) {
+	                        System.out.println(new Timestamp(System.currentTimeMillis())
+	                                +" - [FINE] - (ListenConsole) Connection closed.");
+	                    }
+	                } catch (IOException e) {
 						e.printStackTrace();
 					}
 				}

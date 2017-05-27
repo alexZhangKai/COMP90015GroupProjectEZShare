@@ -648,103 +648,146 @@ public class Connection implements Runnable {
     }
 	
     @SuppressWarnings("unchecked")
-	private void subscribe(JSONObject client_request, DataInputStream receiveFromClient, DataOutputStream sendToClient) {
+	private void subscribe(JSONObject client_request, 
+	        DataInputStream receiveFromClient, DataOutputStream sendToClient) 
+	                throws IOException {
     	Resource in_res;
         JSONParser parser = new JSONParser();
         
-        //TODO The following should throw an invalid resource exception
-        try {
-			in_res = this.JSONObj2Resource((JSONObject) 
-			        parser.parse(client_request.get("resourceTemplate").toString()));
-			String id = client_request.get("id").toString();
-			Boolean relay = (Boolean) client_request.containsKey("relay")? 
-			        (Boolean) client_request.get("relay") : false;
-			
-			JSONObject reply = new JSONObject();
-			reply.put("response", "success");
-			reply.put("id", id);
-			sendToClient.writeUTF(reply.toJSONString());
-			
-			//Create relay/no-relay subscription
-			Subscription newSub = null;
-			
-			if(relay) {
-			    JSONArray serv_list;
-			    @SuppressWarnings("rawtypes")    // no parameters to the List object
-                List relaySocList;
-			    int serverListLength = 0;
-			    
-			    if (secure) {
-                    serv_list = ServerListManager.getSecServerList().getCopyServerList();
-                    serverListLength = ServerListManager.getSecServerList().getLength();
-                    relaySocList = new ArrayList<SSLSocket>();
-                } else {
-                    serv_list = ServerListManager.getUnsecServerList().getCopyServerList();
-                    serverListLength = ServerListManager.getUnsecServerList().getLength();
-                    relaySocList = new ArrayList<Socket>();
+        if (client_request.containsKey("resourceTemplate")) {
+            try {
+             // The following should throw an invalid resource exception
+    			in_res = this.JSONObj2Resource((JSONObject) 
+    			        parser.parse(client_request.get("resourceTemplate").toString()));
+    			
+    			String id = client_request.get("id").toString();
+    			Boolean relay = (Boolean) client_request.containsKey("relay")? 
+    			        (Boolean) client_request.get("relay") : false;
+    			
+    			JSONObject reply = new JSONObject();
+    			reply.put("response", "success");
+    			reply.put("id", id);
+    			sendToClient.writeUTF(reply.toJSONString());
+    			sendToClient.flush();
+    			if (debug) {
+                    System.out.println(new Timestamp(System.currentTimeMillis())
+                            + " - [DEBUG] - SENT: " + reply.toJSONString());
                 }
-			    
-			    SSLSocketFactory sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
-                SSLSocket sslSocket = null;
-                Socket unsecSocket = null;
-                
-			    if(serverListLength > 0){
-					for (int i = 0; i < serverListLength; i++) {
-						//Get server details
-						JSONObject server = (JSONObject)serv_list.get(i);
-						String hostname = (String) server.get("hostname");
-						int port = Integer.parseInt(server.get("port").toString());
-						
-						if (secure) {
-						    sslSocket = (SSLSocket) sslsocketfactory.createSocket(hostname, port);
-						    sslSocket.setSoTimeout(SOCKET_LONG_TIMEOUT_S);
-						    relaySocList.add(sslSocket);
-                        } else {
-                            unsecSocket = new Socket(hostname, port);
-                            unsecSocket.setSoTimeout(SOCKET_LONG_TIMEOUT_S);
-                            relaySocList.add(unsecSocket);
-                        }						
-					}
-					newSub = new Subscription(in_res, sendToClient, id, relaySocList, secure, relay);
-					//Start subscribe relay
-					newSub.ListenSubscribeRelay();
-				}
-			    else {   //when server list is empty but relay is true - for future servers exchanged
-			        newSub = new Subscription(in_res, sendToClient, id, relaySocList, secure, relay);
-			    }
-			} else { // if relay in Subscribe is False
-				newSub = new Subscription(in_res, sendToClient, id, relay);
-			}
-			
-			//match resource with existing resources
-			newSub.matchResource();
-			//add to subscription manager to match new resource + connecting to new servers
-			SubscriptionManager.addSubscription(newSub);
-			
-			//Keep listening from client
-			String read;
-			while(true) {
-			    if ((read = receiveFromClient.readUTF()) != null) {
-					JSONObject newClientRequest = (JSONObject) parser.parse(read);
-					String command = newClientRequest.get("command").toString();
-					if(command.equals("SUBSCRIBE")) {
-						in_res = this.JSONObj2Resource((JSONObject) 
-						        parser.parse(client_request.get("resourceTemplate").toString()));
-						newSub.getNewTemplate(in_res);
-					} else if (command.equals("UNSUBSCRIBE")) {
-						int totalResultSize = newSub.unsubscribe();
-						reply = new JSONObject();
-						reply.put("resultSize", totalResultSize);
-					} else {
-						//TODO throw exception here
-					}		
-				}
-			}
-		} catch (serverException | ParseException e) {
-			e.printStackTrace();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+    			
+    			//Create relay/no-relay subscription
+    			Subscription newSub = null;
+    			
+    			if(relay) {
+    			    JSONArray serv_list;
+    			    @SuppressWarnings("rawtypes")    // no parameters to the List object
+                    List relaySocList;
+    			    int serverListLength = 0;
+    			    
+    			    if (secure) {
+                        serv_list = ServerListManager.getSecServerList().getCopyServerList();
+                        serverListLength = ServerListManager.getSecServerList().getLength();
+                        relaySocList = new ArrayList<SSLSocket>();
+                    } else {
+                        serv_list = ServerListManager.getUnsecServerList().getCopyServerList();
+                        serverListLength = ServerListManager.getUnsecServerList().getLength();
+                        relaySocList = new ArrayList<Socket>();
+                    }
+    			    
+    			    SSLSocketFactory sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
+                    SSLSocket sslSocket = null;
+                    Socket unsecSocket = null;
+                    
+    			    if(serverListLength > 0){
+    					for (int i = 0; i < serverListLength; i++) {
+    						//Get server details
+    						JSONObject server = (JSONObject)serv_list.get(i);
+    						String hostname = (String) server.get("hostname");
+    						int port = Integer.parseInt(server.get("port").toString());
+    						
+    						if (secure) {
+    						    sslSocket = (SSLSocket) sslsocketfactory.createSocket(hostname, port);
+    						    sslSocket.setSoTimeout(SOCKET_LONG_TIMEOUT_S);
+    						    relaySocList.add(sslSocket);
+                            } else {
+                                unsecSocket = new Socket(hostname, port);
+                                unsecSocket.setSoTimeout(SOCKET_LONG_TIMEOUT_S);
+                                relaySocList.add(unsecSocket);
+                            }						
+    					}
+    					newSub = new Subscription(in_res, sendToClient, id, relaySocList, 
+    					        secure, relay, debug);
+    					//Start subscribe relay
+    					newSub.ListenSubscribeRelay();
+    				}
+    			    else {   //when server list is empty but relay is true - for future servers exchanged
+    			        newSub = new Subscription(in_res, sendToClient, id, relaySocList, 
+    			                secure, relay, debug);
+    			    }
+    			} else { // if relay in Subscribe is False
+    				newSub = new Subscription(in_res, sendToClient, id, relay, debug);
+    			}
+    			
+    			//match resource with existing resources
+    			newSub.matchResource();
+    			//add to subscription manager to match new resource + connecting to new servers
+    			SubscriptionManager.addSubscription(newSub);
+    			
+    			//Keep listening from client
+    			String read;
+    			while(true) {
+    			    if ((read = receiveFromClient.readUTF()) != null) {
+    			        if (debug) {
+    		                System.out.println(new Timestamp(System.currentTimeMillis())
+    		                        + " - [DEBUG] - RECEIVED: " + read);
+    		            }
+    					JSONObject newClientRequest = (JSONObject) parser.parse(read);
+    					String command = newClientRequest.get("command").toString();
+    					if(command.equals("SUBSCRIBE")) {
+    						in_res = this.JSONObj2Resource((JSONObject) 
+    						        parser.parse(client_request.get("resourceTemplate").toString()));
+    						newSub.getNewTemplate(in_res);
+    					} else if (command.equals("UNSUBSCRIBE")) {
+    						int totalResultSize = newSub.unsubscribe();
+    						reply = new JSONObject();
+    						reply.put("resultSize", totalResultSize);
+    					} else {
+    					    reply = new JSONObject();
+    		                reply.put("response", "error");
+    		                reply.put("errorMessage", "invalid command");
+    		                sendToClient.writeUTF(reply.toJSONString());
+    		                if (debug) {
+    		                    System.out.println(new Timestamp(System.currentTimeMillis())
+    		                            + " - [DEBUG] - SENT: " + reply.toJSONString());
+    		                }
+    					}
+    			    }
+    			}
+    		} catch (SocketException e){
+                if (debug) {
+                    System.out.println(new Timestamp(System.currentTimeMillis())
+                            +" - [FINE] - (Run) Connection closed by server.");
+                }
+            } catch (SocketTimeoutException e) {
+                if (debug) {
+                    System.out.println(new Timestamp(System.currentTimeMillis())
+                            +" - [FINE] - (Run) Connection closed.");
+                }
+            } catch (serverException | ParseException e) {
+    			e.printStackTrace();
+    		} catch (Exception e) {
+    			e.printStackTrace();
+    		}
+        } else {
+            // Missing resource template error - send to client
+            JSONObject error = new JSONObject();
+            error.put("response", "error");
+            error.put("errorMessage", "missing resourceTemplate");
+            sendToClient.writeUTF(error.toJSONString());
+            if (debug) {
+                System.out.println(new Timestamp(System.currentTimeMillis())
+                        + " - [DEBUG] - SENT: " + error.toJSONString());
+            }
+        }
     }
     
     //Convert incoming resource (in JSON format) into a Resource object

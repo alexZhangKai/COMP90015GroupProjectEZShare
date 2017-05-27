@@ -2,6 +2,7 @@ package EZShare;
 
 import java.io.*;
 import java.net.*;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,24 +22,29 @@ public class Subscription {
 	private int resultCount = 0;
 	private Boolean secure = false;
 	private Boolean relay = false;
+	private Boolean debug = false;
 
     // Relay specified by client
     public Subscription(Resource resourceTemplate, DataOutputStream sendToClient, 
-	        String id, List<Socket> relaySocList, Boolean secure, Boolean relay) {
+	        String id, List<Socket> relaySocList, 
+	        Boolean secure, Boolean relay, Boolean debug) {
 		this.resourceTemplate.add(resourceTemplate);
 		this.sendToClient = sendToClient;
 		this.id = id;
 		this.secure = secure;
 		this.relaySocList = relaySocList;
 		this.relay = relay;
+		this.debug = debug;
 	}
 
 	// No relay specified by client
-	public Subscription(Resource resourceTemplate, DataOutputStream sendToClient, String id, Boolean relay) {
+	public Subscription(Resource resourceTemplate, DataOutputStream sendToClient, 
+	        String id, Boolean relay, Boolean debug) {
 	    this.resourceTemplate.add(resourceTemplate);
         this.sendToClient = sendToClient;
         this.id = id;
         this.relay = relay;
+        this.debug = debug;
     }
 
     void matchNewResource(Resource newRes) throws IOException {
@@ -51,8 +57,10 @@ public class Subscription {
         
         JSONObject resource_temp = Connection.Resource2JSONObject(newRes); 
         sendToClient.writeUTF(resource_temp.toJSONString());
-        //TODO Output ALL readUTF and writeUTF strings when debug == true
-        
+        if (debug) {
+            System.out.println(new Timestamp(System.currentTimeMillis())
+                    + " - [DEBUG] - RECEIVED: " + resource_temp.toJSONString());
+        }        
 	}
 	
 	void matchResource() throws IOException {
@@ -68,6 +76,10 @@ public class Subscription {
         for (Resource res: res_results){
             JSONObject resource_temp = Connection.Resource2JSONObject(res); 
             sendToClient.writeUTF(resource_temp.toJSONString());
+            if (debug) {
+                System.out.println(new Timestamp(System.currentTimeMillis())
+                        + " - [DEBUG] - RECEIVED: " + resource_temp.toJSONString());
+            }
         }
 	}
 
@@ -79,7 +91,8 @@ public class Subscription {
 	//Listen on each server in a new thread 
 	public void ListenSubscribeRelay() {
 		for(Socket relay : relaySocList) {
-			ListenRelay listenRelay = new ListenRelay(sendToClient, relay, resourceTemplate, this.id);
+			ListenRelay listenRelay = new ListenRelay(
+			        sendToClient, relay, resourceTemplate, id, debug);
 			this.listenRelayList.add(listenRelay);
 			listenRelay.start();
 		}
@@ -104,9 +117,17 @@ public class Subscription {
 				command.put("id", this.id);
 				
 				sendToRelay.writeUTF(command.toJSONString());
+				if (debug) {
+		            System.out.println(new Timestamp(System.currentTimeMillis())
+		                    + " - [DEBUG] - RECEIVED: " + command.toJSONString());
+		        }
 				
 				if(receiveFromRelay.available() > 0) {
 					JSONObject relayReply = (JSONObject) parser.parse(receiveFromRelay.readUTF());
+					if (debug) {
+		                System.out.println(new Timestamp(System.currentTimeMillis())
+		                        + " - [DEBUG] - RECEIVED: " + relayReply);
+		            }
 					int relaySize = (int) relayReply.get("resultSize");
 					totalResultSize += relaySize;
 				}
@@ -142,7 +163,8 @@ public class Subscription {
 				
 				relaySocList.add(newRelay);
 
-				ListenRelay listenRelay = new ListenRelay(sendToClient, newRelay, resourceTemplate, id);
+				ListenRelay listenRelay = new ListenRelay(
+				        sendToClient, newRelay, resourceTemplate, id, debug);
 				listenRelayList.add(listenRelay);
 				listenRelay.start();
 			}
@@ -157,86 +179,4 @@ public class Subscription {
     public Boolean getRelay() {
         return relay;
     }
-}
-
-class ListenRelay extends Thread{
-	private Socket server;
-	private DataOutputStream sendToClient;
-	private volatile boolean newTemplateFlag = false;
-	private volatile boolean unsubscribeFlag = false;
-	private List<Resource> template;
-	private Resource newTemplate;
-	private String id;
-	
-	public ListenRelay(DataOutputStream sendToClient, Socket server, List<Resource> template, String id) {
-		this.sendToClient = sendToClient;
-		this.server = server;
-		this.template = template;
-		this.id = id;
-	}
-
-	public void setNewTemplateFlag(Resource newTemplate) {
-		this.newTemplate = newTemplate;
-		this.newTemplateFlag = true;
-	}
-	
-	public void setUnsubscribeFlag() {
-		this.unsubscribeFlag = true;
-	}
- 	
-	@Override
-	@SuppressWarnings("unchecked")
-	public void run() {
-		DataInputStream serverReply;
-		DataOutputStream sendToServer;
-		
-		try {
-			serverReply = new DataInputStream(server.getInputStream());
-			sendToServer = new DataOutputStream(server.getOutputStream());
-			JSONObject command;
-			JSONObject resourceTemplate;
-			
-			for(Resource res : template) {
-				//send the first subscribe command here
-				command = new JSONObject();
-				resourceTemplate = Connection.Resource2JSONObject(res);
-
-				command.put("command", "SUBSCRIBE");
-				command.put("relay", false);
-				command.put("id",this.id);
-				command.put("resourceTemplate", resourceTemplate);
-
-				sendToServer.writeUTF(command.toJSONString());
-			}
-			String result;
-			while(true) {
-				if((result = serverReply.readUTF()) != null) {
-					if(!result.contains("response") && !result.contains("success")) {
-						sendToClient.writeUTF(result);
-					}
-				}
-				
-				if(newTemplateFlag) {
-					//TODO ?? send new subscribe command here
-					command = new JSONObject();
-			    	resourceTemplate = Connection.Resource2JSONObject(this.newTemplate);
-			    	
-			    	command.put("command", "SUBSCRIBE");
-			    	command.put("relay", false);
-			    	command.put("id",this.id);
-			    	command.put("resourceTemplate", resourceTemplate);
-					
-			    	sendToServer.writeUTF(command.toJSONString());
-				}
-				
-				if(this.unsubscribeFlag) {
-					break;
-				}
-				
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		
-	}
 }

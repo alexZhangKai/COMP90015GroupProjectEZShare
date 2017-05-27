@@ -1,6 +1,7 @@
 package EZShare;
 
 import java.io.*;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import org.json.simple.JSONArray;
@@ -28,7 +29,8 @@ public class SubscriptionManager {
 	
 	public static void removeSubscription(Subscription oldSub) {
 		if(!subList.remove(oldSub)) {
-			System.out.println("remove does not success");
+            System.out.println(new Timestamp(System.currentTimeMillis())
+                    + " - [ERROR] - Could not remove subscription");
 		};
 	}
 }
