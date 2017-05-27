@@ -1,3 +1,13 @@
+/*
+ * Distributed Systems
+ * Group Project 2
+ * Sem 1, 2017
+ * Group: AALT
+ * 
+ * Manages each subscription
+ */
+
+
 package EZShare;
 
 import java.io.*;
@@ -10,8 +20,6 @@ import javax.net.ssl.SSLSocketFactory;
 
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
 
 public class Subscription {
 	private List<Resource> resourceTemplate = new ArrayList<Resource>();
@@ -138,7 +146,17 @@ public class Subscription {
 						System.out.println(new Timestamp(System.currentTimeMillis())
 								+ " - [DEBUG] - SENT: " + command.toJSONString());
 					}
-				} catch (IOException e) {
+				} catch (SocketException e){
+		            if (debug) {
+		                System.out.println(new Timestamp(System.currentTimeMillis())
+		                        +" - [FINE] - (Subscription) Connection closed by server.");
+		            }
+		        } catch (SocketTimeoutException e) {
+		            if (debug) {
+		                System.out.println(new Timestamp(System.currentTimeMillis())
+		                        +" - [FINE] - (Subscription) Connection closed by relay server.");
+		            }
+		        } catch (IOException e) {
 					e.printStackTrace();
 				}
 			}

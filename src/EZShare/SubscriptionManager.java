@@ -1,3 +1,13 @@
+/*
+ * Distributed Systems
+ * Group Project 2
+ * Sem 1, 2017
+ * Group: AALT
+ * 
+ * Manages notifications for subscriptions when new resource/server added
+ */
+
+
 package EZShare;
 
 import java.io.*;

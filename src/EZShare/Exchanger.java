@@ -1,3 +1,13 @@
+/*
+ * Distributed Systems
+ * Group Project 2
+ * Sem 1, 2017
+ * Group: AALT
+ * 
+ * Class that handles exchanging servers with others in the list.
+ */
+
+
 package EZShare;
 
 import java.io.DataInputStream;
@@ -20,6 +30,7 @@ public class Exchanger extends TimerTask{
     private Boolean secure = false;
     private String hostname;
     private Boolean debug;
+    
  // Normal timeout duration for closing non-persistent connections
     private static final int SOCKET_NORM_TIMEOUT_MS = 2*1000;    //ms
     
@@ -37,12 +48,15 @@ public class Exchanger extends TimerTask{
     @Override
     public void run() {
         ServerList sList = null;
+        int hostport = 0;
         if (secure){
             sList = ServerListManager.getSecServerList();
+            hostport = Server.sPort;
             System.out.println("\n" + new Timestamp(System.currentTimeMillis()) 
                     + " - [INFO] - started secure Exchanger\n");
         } else {
             sList = ServerListManager.getUnsecServerList();
+            hostport = Server.port;
             System.out.println("\n" + new Timestamp(System.currentTimeMillis()) 
                     + " - [INFO] - started Exchanger\n");
         }
@@ -81,7 +95,7 @@ public class Exchanger extends TimerTask{
                 JSONArray serverArr = sList.getCopyServerList();
                 JSONObject host = new JSONObject();
                 host.put("hostname", hostname);
-                host.put("port", port);
+                host.put("port", hostport);
                 serverArr.add(host);
 
                 command.put("serverList", serverArr);

@@ -1,6 +1,6 @@
 /*
  * Distributed Systems
- * Group Project 1
+ * Group Project 2
  * Sem 1, 2017
  * Group: AALT
  * 
@@ -147,8 +147,6 @@ public class Connection implements Runnable {
 				e1.printStackTrace();
 			}
 		} 
-		// TODO JAR file containing keystores not accessible
-
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -367,7 +365,6 @@ public class Connection implements Runnable {
                 for (Resource res: res_results){
                     JSONObject resource_temp = Resource2JSONObject(res); 
                     
-                    //TODO check if the implementation below is OK
                     //If the result contains an owner (not empty), replace it with "*"
                     if(!resource_temp.get("owner").equals("")) {
                     	resource_temp.put("owner", "*");
@@ -389,16 +386,18 @@ public class Connection implements Runnable {
                             + " - [DEBUG] - SENT: " + result_size.toJSONString());
                 }
                 
-            } catch (Exception e) { //invalid resourceTemplate
-                JSONObject inv_res = new JSONObject();
-                inv_res.put("response", "error");
-                inv_res.put("errorMessage", "invalid resourceTemplate");
-                output.writeUTF(inv_res.toJSONString());
-                if (debug) {
-                    System.out.println(new Timestamp(System.currentTimeMillis())
-                            + " - [DEBUG] - SENT: " + inv_res.toJSONString());
-                }
-            }            
+            } catch (serverException e){ //invalid resourceTemplate
+              JSONObject inv_res = new JSONObject();
+              inv_res.put("response", "error");
+              inv_res.put("errorMessage", "invalid resourceTemplate");
+              output.writeUTF(inv_res.toJSONString());
+              if (debug) {
+                  System.out.println(new Timestamp(System.currentTimeMillis())
+                          + " - [DEBUG] - SENT: " + inv_res.toJSONString());
+              }
+            } catch (Exception e) { 
+                e.printStackTrace();
+            }
         } else {
             // Missing resource template error - send to client
             JSONObject error = new JSONObject();

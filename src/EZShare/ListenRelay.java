@@ -1,8 +1,22 @@
+/*
+ * Distributed Systems
+ * Group Project 2
+ * Sem 1, 2017
+ * Group: AALT
+ * 
+ * For each relay connection for each client, creates a new thread
+ * # of threads = # of servers x # of clients subscriptions[w/ relay]
+ */
+
+
 package EZShare;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.EOFException;
 import java.net.Socket;
+import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.sql.Timestamp;
 import java.util.List;
 
@@ -68,6 +82,10 @@ class ListenRelay extends Thread{
                 command.put("resourceTemplate", resourceTemplate);
 
                 sendToServer.writeUTF(command.toJSONString());
+                if (debug) {
+                    System.out.println(new Timestamp(System.currentTimeMillis())
+                            + " - [DEBUG] - SENT: " + command.toJSONString());
+                }
             }
             String result;
             while(true) {
@@ -110,13 +128,26 @@ class ListenRelay extends Thread{
 					if (debug) {
 						System.out.println(new Timestamp(System.currentTimeMillis())
 								+ " - [DEBUG] - RECEIVED: " + command.toJSONString());
-					}
-					
+					}	
                 }
-                
                 if(this.unsubscribeFlag) {
                     break;
                 }
+            }
+        } catch (SocketException e){
+            if (debug) {
+                System.out.println(new Timestamp(System.currentTimeMillis())
+                        +" - [FINE] - (ListenRelay) Connection closed by server.");
+            }
+        } catch (SocketTimeoutException e) {
+            if (debug) {
+                System.out.println(new Timestamp(System.currentTimeMillis())
+                        +" - [FINE] - (ListenRelay) Connection closed.");
+            }
+        } catch (EOFException e){
+            if (debug){
+                System.out.println(new Timestamp(System.currentTimeMillis())
+                        +" - [FINE] - (ListenRelay) Connection closed by server.");
             }
         } catch (Exception e) {
             e.printStackTrace();

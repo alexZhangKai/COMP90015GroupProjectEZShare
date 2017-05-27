@@ -1,6 +1,6 @@
 /*
  * Distributed Systems
- * Group Project 1
+ * Group Project 2
  * Sem 1, 2017
  * Group: AALT
  * 
@@ -43,6 +43,7 @@ public class ServerList {
 			boolean safeToAdd = true;
 			//don't add if the server is self
 			if (newHostname.equals(hostname) && newPort == hostport){
+				System.out.println("not add itself");
 			    safeToAdd = false;
 			}
 			
