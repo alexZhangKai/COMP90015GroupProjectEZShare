@@ -366,6 +366,13 @@ public class Connection implements Runnable {
                 //send each resource to client
                 for (Resource res: res_results){
                     JSONObject resource_temp = Resource2JSONObject(res); 
+                    
+                    //TODO check if the implementation below is OK
+                    //If the result contains an owner (not empty), replace it with "*"
+                    if(!resource_temp.get("owner").equals("")) {
+                    	resource_temp.put("owner", "*");
+                    }
+                    
                     output.writeUTF(resource_temp.toJSONString());
                     if (debug) {
                         System.out.println(new Timestamp(System.currentTimeMillis())
@@ -542,7 +549,11 @@ public class Connection implements Runnable {
 				//Because it's read in 'read' mode, it is thread-safe
 				RandomAccessFile byteFile = new RandomAccessFile(f, "r");
 				JSONObject resource = Resource2JSONObject(match);
-				resource.put("owner", "*"); //protect privacy of owner
+				
+                //If the result contains an owner (not empty), replace it with "*"
+                if(!resource.get("owner").equals("")) {
+                	resource.put("owner", "*");
+                }
 				
 				//send file size
 				resource.put("resourceSize", byteFile.length());
@@ -750,6 +761,15 @@ public class Connection implements Runnable {
     						int totalResultSize = newSub.unsubscribe();
     						reply = new JSONObject();
     						reply.put("resultSize", totalResultSize);
+    						sendToClient.writeUTF(reply.toJSONString());
+    						
+    						if (debug) {
+    							System.out.println(new Timestamp(System.currentTimeMillis())
+    									+ " - [DEBUG] - SENT: " + reply.toJSONString());
+    						}
+    						
+    						SubscriptionManager.removeSubscription(newSub);
+    						break;
     					} else {
     					    reply = new JSONObject();
     		                reply.put("response", "error");

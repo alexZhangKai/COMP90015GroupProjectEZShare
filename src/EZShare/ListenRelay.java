@@ -7,6 +7,7 @@ import java.sql.Timestamp;
 import java.util.List;
 
 import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
 
 class ListenRelay extends Thread{
     private Socket server;
@@ -17,7 +18,10 @@ class ListenRelay extends Thread{
     private Resource newTemplate;
     private String id;
     private Boolean debug = false;
+    private int resultCount = 0;
     
+   
+    		
     public ListenRelay(DataOutputStream sendToClient, Socket server, 
             List<Resource> template, String id, Boolean debug) {
         this.sendToClient = sendToClient;
@@ -36,6 +40,10 @@ class ListenRelay extends Thread{
         this.unsubscribeFlag = true;
     }
     
+    public int getResultSize() {
+    	return this.resultCount;
+    }
+    
     @Override
     @SuppressWarnings("unchecked")
     public void run() {
@@ -47,6 +55,7 @@ class ListenRelay extends Thread{
             sendToServer = new DataOutputStream(server.getOutputStream());
             JSONObject command;
             JSONObject resourceTemplate;
+            JSONParser parser = new JSONParser();
             
             for(Resource res : template) {
                 //send the first subscribe command here
@@ -63,32 +72,51 @@ class ListenRelay extends Thread{
             String result;
             while(true) {
                 if((result = serverReply.readUTF()) != null) {
+                	JSONObject resultJSON = (JSONObject) parser.parse(result);
+                	
                     if (debug) {
                         System.out.println(new Timestamp(System.currentTimeMillis())
                                 + " - [DEBUG] - RECEIVED: " + result);
                     }
-                    if(!result.contains("response") && !result.contains("success")) {
+                    
+                    if(!resultJSON.containsKey("response") && !resultJSON.containsKey("resultSize")) {
                         sendToClient.writeUTF(result);
+                        if (debug) {
+                            System.out.println(new Timestamp(System.currentTimeMillis())
+                                    + " - [DEBUG] - SENT: " + result);
+                        }
                     }
+                    
+                    if(resultJSON.containsKey("resultSize")) {
+                    	this.resultCount = Integer.parseInt(resultJSON.get("resultSize").toString());
+                    	break;
+                    }
+                    
                 }
                 
                 if(newTemplateFlag) {
-                    //TODO ?? send new subscribe command here
+                    //send relay subscribe command here
                     command = new JSONObject();
                     resourceTemplate = Connection.Resource2JSONObject(this.newTemplate);
                     
                     command.put("command", "SUBSCRIBE");
                     command.put("relay", false);
                     command.put("id",this.id);
-                    command.put("resourceTemplate", resourceTemplate);
-                    
+                    resourceTemplate.put("channel", "");
+                    resourceTemplate.put("owner", "");
+                    command.put("resourceTemplate", resourceTemplate);                 
                     sendToServer.writeUTF(command.toJSONString());
+                    
+					if (debug) {
+						System.out.println(new Timestamp(System.currentTimeMillis())
+								+ " - [DEBUG] - RECEIVED: " + command.toJSONString());
+					}
+					
                 }
                 
                 if(this.unsubscribeFlag) {
                     break;
                 }
-                
             }
         } catch (Exception e) {
             e.printStackTrace();
