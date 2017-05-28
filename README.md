@@ -40,3 +40,28 @@
 - **Exchange** list of other servers with a given server, securely
 
     ```java -cp ezshare.jar EZShare/Client -debug -secure -host 100.98.55.22 -exchange -servers 100.98.58.247:3781```
+
+---
+
+### Potential Improvements
+
+- Socket timeout counter - remove server from list after N timeouts, not straightaway
+- Multithreaded propagateQuery method
+- Update Client IP list method - remove entries when they expire
+- Resource class to a SynchronisedList that stores JSON objects.
+- Automate testing (via JUnit?)
+- Add documentation (via JavaDocs?)
+
+---
+
+### Spec Clarifications
+
+- The client only sends a single subscription request. This is just to make your client easier to build. If you wanted you could build the client to enable it to send multiple subscription requests, so long as it works exactly as intended in the project specification for testing purposes.
+
+- The id field of the subscription request is not given by the user, it is just something that the client can make up. It could just as well be "X". The field is more useful when one server subscribes to another server, since it might bundle a bunch of subscription requests on the one connection, depending on your implementation.
+
+- The id field does not have to be unique over the clients since each client's connection itself is used to discriminate between ids.
+
+- Whenever a resource is updated or a new one is created then the subscription should hit it and it should be sent back to the client (even if the update did not change anything, unless an error occurred and the update did not go through). This counts as part of the result size. However removing a resource should not lead to anything being sent to the client.
+
+- Some error conditions were not explicitly stated. Generally, the project is following an RR protocol, where every request has a response. So each subscription request should have a response. As well there can be error responses. Follow the pattern we've been following so far in the case where it is not explicitly stated what to do.
