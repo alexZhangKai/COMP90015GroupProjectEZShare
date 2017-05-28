@@ -1,6 +1,6 @@
 # [COMP90015](https://handbook.unimelb.edu.au/subjects/comp90015/) Distributed Systems
 
-## Project 2
+## Group Project (1 & 2)
 
 ### Semester 1, 2017 - University of Melbourne
 
