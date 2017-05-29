@@ -20,7 +20,7 @@
 - [AB](https://github.com/abhineet-gupta)
 - [Alex](https://github.com/alexZhangKai)
 - [Lisha](https://github.com/Lisharabbit)
-- Titus
+- [Titus](https://github.com/titusching)
 ---
 
 #### Sample Runs
